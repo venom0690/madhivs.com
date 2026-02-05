@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Product Details - Maadhivs Boutique">
+    <title>Product Details - Maadhivs Boutique</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <!-- Header  Navigation -->
+    <header class="navbar">
+        <!-- Left -->
+        <div class="nav-left">
+            <span class="hamburger">&#9776;</span>
+            <nav class="nav-links">
+                <a href="men.html" class="active">MEN</a>
+                <a href="women.html" class="active1">WOMEN</a>
+                <a href="services.html">SERVICES</a>
+                <a href="about.html">ABOUT</a>
+                <a href="contact.html">CONTACT</a>
+            </nav>
+        </div>
+
+        <!-- Center -->
+        <div class="nav-logo">
+            <a href="index.html" style="text-decoration: none; color: inherit;">Maadhivs Boutique</a>
+        </div>
+        <div class="nav-right">
+            <div class="search-box">
+                <input type="text" placeholder="What are you looking for?" />
+                <span class="search-icon">🔍</span>
+            </div>
+            <a href="wishlist.html" class="icon wishlist-link"
+                style="font-family: Arial, sans-serif; font-size: 1.5rem; font-weight: 600;">
+
+                wishlist
+                <span class="wishlist-count">0</span>
+            </a>
+            <span class="icon"></span>
+            <a href="cart.html" class="icon">🛒</a>
+        </div>
+    </header>
+
+    <!-- Product Detail Section -->
+    <section class="section product-detail-section">
+        <div class="product-detail-container">
+            <!-- Product Images -->
+            <div class="product-detail-images">
+                <img id="productMainImage" class="product-detail-main-image" src="" alt="Product Image">
+
+                <div class="product-detail-thumbnails">
+                    <img class="product-detail-thumbnail active" src="" alt="Thumbnail 1" data-index="0">
+                    <img class="product-detail-thumbnail" src="" alt="Thumbnail 2" data-index="1">
+                    <img class="product-detail-thumbnail" src="" alt="Thumbnail 3" data-index="2">
+                    <img class="product-detail-thumbnail" src="" alt="Thumbnail 4" data-index="3">
+                </div>
+            </div>
+
+            <!-- Product Information -->
+            <div class="product-detail-info">
+                <h1 id="productName" class="product-detail-title">Product Name</h1>
+                <p id="productPrice" class="product-detail-price">₹0</p>
+
+                <div class="product-detail-description">
+                    <h3>Product Description</h3>
+                    <p id="productDescription">Premium quality ethnic wear crafted with finest fabrics and intricate
+                        detailing. Perfect for special occasions and celebrations. Features traditional designs with
+                        modern comfort.</p>
+                </div>
+
+                <div class="custom-design-note">
+                    <p><strong>Want this piece tailored exclusively for you?</strong></p>
+                    <p><a href="contact.html?inquiry=custom" class="custom-design-link">Contact us for personalization
+                            →</a></p>
+                </div>
+
+                <!-- Size Selector -->
+                <div class="product-selector">
+                    <h4>Select Size</h4>
+                    <div class="size-options">
+                        <button class="size-btn" data-size="S">S</button>
+                        <button class="size-btn active" data-size="M">M</button>
+                        <button class="size-btn" data-size="L">L</button>
+                        <button class="size-btn" data-size="XL">XL</button>
+                    </div>
+                </div>
+
+                <!-- Quantity Selector -->
+                <div class="product-selector">
+                    <h4>Quantity</h4>
+                    <div class="quantity-selector">
+                        <button class="quantity-btn" id="decreaseQty">-</button>
+                        <input type="number" id="quantityInput" class="quantity-input" value="1" min="1" max="10"
+                            readonly>
+                        <button class="quantity-btn" id="increaseQty">+</button>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="product-actions">
+                    <button class="btn btn-secondary" id="addToCartBtn">Add to Cart</button>
+                    <button class="btn btn-primary" id="buyNowBtn">Buy Now</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-logo">Maadhivs Boutique</div>
+            <p class="footer-text">Premium Indian Ethnic Wear</p>
+            <p class="footer-text">&copy; 2026 Maadhivs Boutique. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="js/product-detail.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/wishlist.js" defer></script>
+    <script src="js/hamburger.js" defer></script>
+</body>
+
+</html>

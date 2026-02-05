@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Keywords - Admin Panel</title>
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">Maadhivs Boutique</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main</div>
+                    <a href="dashboard.html" class="nav-link">
+                        <span class="nav-icon">📊</span>
+                        <span>Dashboard</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Management</div>
+                    <a href="products.html" class="nav-link">
+                        <span class="nav-icon">📦</span>
+                        <span>Products</span>
+                    </a>
+                    <a href="categories.html" class="nav-link">
+                        <span class="nav-icon">🏷️</span>
+                        <span>Categories</span>
+                    </a>
+                    <a href="orders.html" class="nav-link">
+                        <span class="nav-icon">🛒</span>
+                        <span>Orders</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Content</div>
+                    <a href="homepage.html" class="nav-link">
+                        <span class="nav-icon">🏠</span>
+                        <span>Homepage</span>
+                    </a>
+                    <a href="keywords.html" class="nav-link active">
+                        <span class="nav-icon">🔍</span>
+                        <span>Search Keywords</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar">A</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">Admin</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
+                </div>
+                <button class="btn btn-logout" id="logoutBtn">Logout</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Search Keywords</h1>
+                <p class="page-subtitle">Manage custom search keywords and mappings</p>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">All Keywords</h2>
+                    <button class="btn btn-primary btn-sm" id="addKeywordBtn">+ Add Keyword</button>
+                </div>
+                <div class="card-body">
+                    <div id="keywordsTableContainer">
+                        <!-- Table will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Keyword Modal -->
+    <div class="modal" id="keywordModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Add Search Keyword</h3>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="keywordForm">
+                    <input type="hidden" id="keywordId">
+
+                    <div class="form-group">
+                        <label class="form-label" for="keywordText">Keyword *</label>
+                        <input type="text" id="keywordText" class="form-input"
+                            placeholder="e.g., wedding, party, festive" required>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 0.25rem;">
+                            Users will search for this keyword
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="linkedProducts">Link to Products (optional)</label>
+                        <select id="linkedProducts" class="form-select" multiple style="height: 150px;">
+                            <!-- Products will be loaded here -->
+                        </select>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 0.25rem;">
+                            Hold Ctrl/Cmd to select multiple
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="linkedCategories">Link to Categories (optional)</label>
+                        <select id="linkedCategories" class="form-select" multiple style="height: 100px;">
+                            <!-- Categories will be loaded here -->
+                        </select>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 0.25rem;">
+                            Hold Ctrl/Cmd to select multiple
+                        </div>
+                    </div>
+
+                    <div class="error-message" id="formError"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
+                <button class="btn btn-primary" id="saveBtn">Save Keyword</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/models.js"></script>
+    <script src="js/data-service.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/keywords-admin.js"></script>
+</body>
+
+</html>

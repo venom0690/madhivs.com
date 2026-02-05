@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homepage Control - Admin Panel</title>
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">Maadhivs Boutique</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main</div>
+                    <a href="dashboard.html" class="nav-link">
+                        <span class="nav-icon">📊</span>
+                        <span>Dashboard</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Management</div>
+                    <a href="products.html" class="nav-link">
+                        <span class="nav-icon">📦</span>
+                        <span>Products</span>
+                    </a>
+                    <a href="categories.html" class="nav-link">
+                        <span class="nav-icon">🏷️</span>
+                        <span>Categories</span>
+                    </a>
+                    <a href="orders.html" class="nav-link">
+                        <span class="nav-icon">🛒</span>
+                        <span>Orders</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Content</div>
+                    <a href="homepage.html" class="nav-link active">
+                        <span class="nav-icon">🏠</span>
+                        <span>Homepage</span>
+                    </a>
+                    <a href="keywords.html" class="nav-link">
+                        <span class="nav-icon">🔍</span>
+                        <span>Search Keywords</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar">A</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">Admin</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
+                </div>
+                <button class="btn btn-logout" id="logoutBtn">Logout</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Homepage Control</h1>
+                <p class="page-subtitle">Manage homepage content and sections</p>
+            </div>
+
+            <!-- Slider Management -->
+            <div class="card mb-2">
+                <div class="card-header">
+                    <h2 class="card-title">Hero Slider Images</h2>
+                    <button class="btn btn-primary btn-sm" id="addSliderImageBtn">+ Add Slider Image</button>
+                </div>
+                <div class="card-body">
+                    <div id="sliderImagesContainer">
+                        <!-- Slider images will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trending Products -->
+            <div class="card mb-2">
+                <div class="card-header">
+                    <h2 class="card-title">Trending Products Section</h2>
+                </div>
+                <div class="card-body">
+                    <div class="form-group mb-1">
+                        <label class="form-label">Select Products (marked as Trending)</label>
+                        <select id="trendingProductSelect" class="form-select">
+                            <option value="">Choose a product to add</option>
+                        </select>
+                    </div>
+                    <div id="trendingProductsList">
+                        <!-- Selected trending products will be shown here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Popular Products -->
+            <div class="card mb-2">
+                <div class="card-header">
+                    <h2 class="card-title">Popular Products Section</h2>
+                </div>
+                <div class="card-body">
+                    <div class="form-group mb-1">
+                        <label class="form-label">Select Products (marked as Popular)</label>
+                        <select id="popularProductSelect" class="form-select">
+                            <option value="">Choose a product to add</option>
+                        </select>
+                    </div>
+                    <div id="popularProductsList">
+                        <!-- Selected popular products will be shown here -->
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn btn-success" id="saveChangesBtn" style="width: 100%; padding: 1rem; font-size: 16px;">
+                💾 Save All Changes
+            </button>
+        </main>
+    </div>
+
+    <!-- Add Slider Image Modal -->
+    <div class="modal" id="sliderModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add Slider Image</h3>
+                <button class="modal-close" id="closeSliderModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Image URL</label>
+                    <input type="text" id="sliderImageUrl" class="form-input" placeholder="Enter image URL">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Or Upload Image</label>
+                    <input type="file" id="sliderImageFile" class="form-input" accept="image/*">
+                </div>
+                <div class="image-preview" id="sliderImagePreview"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelSliderBtn">Cancel</button>
+                <button class="btn btn-primary" id="addSliderBtn">Add Image</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/models.js"></script>
+    <script src="js/data-service.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/homepage-admin.js"></script>
+</body>
+
+</html>

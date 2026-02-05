@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Contact Maadhivs Boutique - Get in touch with us for inquiries">
+    <title>Contact Us | Maadhivs Boutique</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <header class="navbar">
+        <!-- Left -->
+        <div class="nav-left">
+            <span class="hamburger">&#9776;</span>
+            <nav class="nav-links">
+                <a href="men.html" class="active">MEN</a>
+                <a href="women.html" class="active1">WOMEN</a>
+                <a href="services.html">SERVICES</a>
+                <a href="about.html">ABOUT</a>
+                <a href="contact.html">CONTACT</a>
+            </nav>
+        </div>
+
+        <!-- Center -->
+        <div class="nav-logo">
+            <a href="index.html" style="text-decoration: none; color: inherit;">Maadhivs Boutique</a>
+        </div>
+        <div class="nav-right">
+            <div class="search-box">
+                <input type="text" placeholder="What are you looking for?" />
+                <span class="search-icon">🔍</span>
+            </div>
+            <a href="wishlist.html" class="icon wishlist-link"
+                style="font-family: Arial, sans-serif; font-size: 1.5rem; font-weight: 600;">
+
+                wishlist
+                <span class="wishlist-count">0</span>
+            </a>
+            <span class="icon"></span>
+            <a href="cart.html" class="icon">🛒</a>
+        </div>
+    </header>
+
+    <!-- Contact Section -->
+    <section class="section contact-section">
+        <div class="section-header">
+            <h1 class="section-title">Contact Us</h1>
+            <p class="section-subtitle">We'd love to hear from you</p>
+        </div>
+
+        <div class="contact-container">
+            <!-- Contact Information -->
+            <div class="contact-info">
+                <h2 style="display: flex; justify-content:center">Get in Touch</h2>
+
+                <div class="contact-detail">
+                    <div class="contact-icon">📍</div>
+                    <div>
+                        <h3>Visit Our Store</h3>
+                        <p>123 Fashion Street, Boutique District<br>Mumbai, Maharashtra 400001<br>India</p>
+                    </div>
+                </div>
+
+                <div class="contact-detail">
+                    <div class="contact-icon">📞</div>
+                    <div>
+                        <h3>Call Us</h3>
+                        <p>+91 98765 43210<br>+91 98765 43211</p>
+                    </div>
+                </div>
+
+                <div class="contact-detail">
+                    <div class="contact-icon">✉️</div>
+                    <div>
+                        <h3>Email Us</h3>
+                        <p>info@maadhivsboutique.com<br>support@maadhivsboutique.com</p>
+                    </div>
+                </div>
+
+                <div class="contact-detail">
+                    <div class="contact-icon">🕐</div>
+                    <div>
+                        <h3>Business Hours</h3>
+                        <p>Monday - Saturday: 10:00 AM - 8:00 PM<br>Sunday: 11:00 AM - 6:00 PM</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Form -->
+            <div class="contact-form-wrapper">
+                <h2>Send Us a Message</h2>
+                <form class="contact-form" id="contactForm">
+                    <div class="form-group">
+                        <label for="fullName">Full Name *</label>
+                        <input type="text" id="fullName" name="fullName" required placeholder="Enter your full name">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email Address *</label>
+                        <input type="email" id="email" name="email" required placeholder="your.email@example.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">Phone Number *</label>
+                        <input type="tel" id="phone" name="phone" required placeholder="+91 98765 43210">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inquiryType">Purpose of Inquiry *</label>
+                        <select id="inquiryType" name="inquiryType" required class="form-select">
+                            <option value="">Select an option...</option>
+                            <option value="general">General Inquiry</option>
+                            <option value="custom">Custom Outfit</option>
+                            <option value="styling">Styling Consultation</option>
+                            <option value="bulk">Bulk Order</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="message">Your Message *</label>
+                        <textarea id="message" name="message" rows="6" required
+                            placeholder="Tell us how we can help you..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-submit">Send Message</button>
+                </form>
+
+                <!-- Success Message (Hidden by default) -->
+                <div class="success-message hidden" id="successMessage">
+                    <div class="success-icon">✓</div>
+                    <h3>Thank You!</h3>
+                    <p>Thank you for contacting us. We will get back to you soon.</p>
+                    <button class="btn btn-secondary" onclick="window.location.href='index.html'">Continue
+                        Shopping</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-logo">Maadhivs Boutique</div>
+            <p class="footer-text">Premium Indian Ethnic Wear</p>
+            <p class="footer-text">&copy; 2026 Maadhivs Boutique. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="js/wishlist.js"></script>
+    <script src="js/search.js"></script>
+    <script src="js/hamburger.js"></script>
+    <script src="js/contact.js"></script>
+    <script src="js/contact-params.js"></script>
+</body>
+
+</html>

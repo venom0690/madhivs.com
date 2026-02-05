@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <meta name="theme-color" content="#ff6600">
+  <title>Shop | UrbanWear</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="navbar">
+  <div class="logo">UrbanWear</div>
+  <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle menu">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+  <nav id="main-nav">
+    <a href="index.html">Home</a>
+    <a href="shop.html">Shop</a>
+    <div class="categories-dropdown">
+      <a href="shop.html">Categories</a>
+      <div class="categories-menu">
+        <a href="shop.html?category=all">All Categories</a>
+        <a href="shop.html?category=men">Men</a>
+        <a href="shop.html?category=women">Women</a>
+        <a href="shop.html?category=hoodies">Hoodies</a>
+        <a href="shop.html?category=jackets">Jackets</a>
+      </div>
+    </div>
+    <a href="wishlist.html">Wishlist <span class="wishlist-count" id="wishlist-count">0</span></a>
+    <a href="cart.html">Cart <span class="cart-count" id="cart-count">0</span></a>
+  </nav>
+</header>
+
+<section class="shop-container">
+  <!-- FILTER -->
+  <aside class="filter">
+    <h3>Filter Products</h3>
+    <label>Category</label>
+    <select onchange="filterCategory(this.value)">
+      <option value="all">All Categories</option>
+      <option value="men">Men</option>
+      <option value="women">Women</option>
+      <option value="hoodies">Hoodies</option>
+      <option value="jackets">Jackets</option>
+    </select>
+    <label>Size</label>
+    <select onchange="filterSize(this.value)">
+      <option value="all">All Sizes</option>
+      <option value="S">Small (S)</option>
+      <option value="M">Medium (M)</option>
+      <option value="L">Large (L)</option>
+      <option value="XL">Extra Large (XL)</option>
+      <option value="28">28</option>
+      <option value="30">30</option>
+      <option value="32">32</option>
+      <option value="34">34</option>
+      <option value="7">7</option>
+      <option value="8">8</option>
+      <option value="9">9</option>
+      <option value="10">10</option>
+      <option value="One Size">One Size</option>
+    </select>
+    <label>Price Range</label>
+    <select onchange="filterPrice(this.value)">
+      <option value="all">All Prices</option>
+      <option value="0-1000">Under ₹1,000</option>
+      <option value="1000-2000">₹1,000 - ₹2,000</option>
+      <option value="2000-3000">₹2,000 - ₹3,000</option>
+      <option value="3000+">Above ₹3,000</option>
+    </select>
+  </aside>
+
+  <!-- PRODUCTS -->
+  <div class="product-grid" id="shop-products">
+    <div class="card men hoodies" data-price="1499" data-product-id="shop-1" data-category="men">
+      <button class="wishlist-btn" onclick="toggleWishlist('Men Hoodie', 1499, 'https://images.unsplash.com/photo-1521334884684-d80222895322', 'Men')" id="wish-shop-1">
+        <svg fill="currentColor" viewBox="0 0 20 20">
+          <path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"/>
+        </svg>
+      </button>
+      <img src="https://images.unsplash.com/photo-1521334884684-d80222895322" alt="Men Hoodie">
+      <div class="card-content">
+        <span class="category-badge">Men</span>
+        <h3>Men Hoodie</h3>
+        <p>₹1,499</p>
+        <div class="size-selector">
+          <label>Size</label>
+          <div class="size-options">
+            <button class="size-btn" onclick="selectSize('shop-1', 'S')">S</button>
+            <button class="size-btn" onclick="selectSize('shop-1', 'M')">M</button>
+            <button class="size-btn" onclick="selectSize('shop-1', 'L')">L</button>
+            <button class="size-btn" onclick="selectSize('shop-1', 'XL')">XL</button>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button onclick="addToCart('Men Hoodie', 1499, 'https://images.unsplash.com/photo-1521334884684-d80222895322', 'Men', null, 'shop-1')">Add to Cart</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card women" data-price="1199" data-product-id="shop-2" data-category="women">
+      <button class="wishlist-btn" onclick="toggleWishlist('Women Top', 1199, 'https://images.unsplash.com/photo-1520974735194-8f84a1f40f17', 'Women')" id="wish-shop-2">
+        <svg fill="currentColor" viewBox="0 0 20 20">
+          <path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"/>
+        </svg>
+      </button>
+      <img src="https://images.unsplash.com/photo-1520974735194-8f84a1f40f17" alt="Women Top">
+      <div class="card-content">
+        <span class="category-badge">Women</span>
+        <h3>Women Top</h3>
+        <p>₹1,199</p>
+        <div class="size-selector">
+          <label>Size</label>
+          <div class="size-options">
+            <button class="size-btn" onclick="selectSize('shop-2', 'S')">S</button>
+            <button class="size-btn" onclick="selectSize('shop-2', 'M')">M</button>
+            <button class="size-btn" onclick="selectSize('shop-2', 'L')">L</button>
+            <button class="size-btn" onclick="selectSize('shop-2', 'XL')">XL</button>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button onclick="addToCart('Women Top', 1199, 'https://images.unsplash.com/photo-1520974735194-8f84a1f40f17', 'Women', null, 'shop-2')">Add to Cart</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card men jackets" data-price="2999" data-product-id="shop-3" data-category="jackets">
+      <button class="wishlist-btn" onclick="toggleWishlist('Men Leather Jacket', 2999, 'https://images.unsplash.com/photo-1551028719-00167b16eac5', 'Jackets')" id="wish-shop-3">
+        <svg fill="currentColor" viewBox="0 0 20 20">
+          <path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"/>
+        </svg>
+      </button>
+      <img src="https://images.unsplash.com/photo-1551028719-00167b16eac5" alt="Men Leather Jacket">
+      <div class="card-content">
+        <span class="category-badge">Jackets</span>
+        <h3>Men Leather Jacket</h3>
+        <p>₹2,999</p>
+        <div class="size-selector">
+          <label>Size</label>
+          <div class="size-options">
+            <button class="size-btn" onclick="selectSize('shop-3', 'S')">S</button>
+            <button class="size-btn" onclick="selectSize('shop-3', 'M')">M</button>
+            <button class="size-btn" onclick="selectSize('shop-3', 'L')">L</button>
+            <button class="size-btn" onclick="selectSize('shop-3', 'XL')">XL</button>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button onclick="addToCart('Men Leather Jacket', 2999, 'https://images.unsplash.com/photo-1551028719-00167b16eac5', 'Jackets', null, 'shop-3')">Add to Cart</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card women hoodies" data-price="1799" data-product-id="shop-4" data-category="women">
+      <button class="wishlist-btn" onclick="toggleWishlist('Women Hoodie', 1799, 'https://images.unsplash.com/photo-1556821840-3a63f95609a7', 'Women')" id="wish-shop-4">
+        <svg fill="currentColor" viewBox="0 0 20 20">
+          <path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"/>
+        </svg>
+      </button>
+      <img src="https://images.unsplash.com/photo-1556821840-3a63f95609a7" alt="Women Hoodie">
+      <div class="card-content">
+        <span class="category-badge">Women</span>
+        <h3>Women Hoodie</h3>
+        <p>₹1,799</p>
+        <div class="size-selector">
+          <label>Size</label>
+          <div class="size-options">
+            <button class="size-btn" onclick="selectSize('shop-4', 'S')">S</button>
+            <button class="size-btn" onclick="selectSize('shop-4', 'M')">M</button>
+            <button class="size-btn" onclick="selectSize('shop-4', 'L')">L</button>
+            <button class="size-btn" onclick="selectSize('shop-4', 'XL')">XL</button>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button onclick="addToCart('Women Hoodie', 1799, 'https://images.unsplash.com/photo-1556821840-3a63f95609a7', 'Women', null, 'shop-4')">Add to Cart</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card men" data-price="899" data-product-id="shop-5" data-category="men">
+      <button class="wishlist-btn" onclick="toggleWishlist('Men T-Shirt', 899, 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab', 'Men')" id="wish-shop-5">
+        <svg fill="currentColor" viewBox="0 0 20 20">
+          <path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"/>
+        </svg>
+      </button>
+      <img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab" alt="Men T-Shirt">
+      <div class="card-content">
+        <span class="category-badge">Men</span>
+        <h3>Men T-Shirt</h3>
+        <p>₹899</p>
+        <div class="size-selector">
+          <label>Size</label>
+          <div class="size-options">
+            <button class="size-btn" onclick="selectSize('shop-5', 'S')">S</button>
+            <button class="size-btn" onclick="selectSize('shop-5', 'M')">M</button>
+            <button class="size-btn" onclick="selectSize('shop-5', 'L')">L</button>
+            <button class="size-btn" onclick="selectSize('shop-5', 'XL')">XL</button>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button onclick="addToCart('Men T-Shirt', 899, 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab', 'Men', null, 'shop-5')">Add to Cart</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card women jackets" data-price="2499" data-product-id="shop-6" data-category="jackets">
+      <button class="wishlist-btn" onclick="toggleWishlist('Women Denim Jacket', 2499, 'https://images.unsplash.com/photo-1539533018447-63fcce2678e3', 'Jackets')" id="wish-shop-6">
+        <svg fill="currentColor" viewBox="0 0 20 20">
+          <path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"/>
+        </svg>
+      </button>
+      <img src="https://images.unsplash.com/photo-1539533018447-63fcce2678e3" alt="Women Denim Jacket">
+      <div class="card-content">
+        <span class="category-badge">Jackets</span>
+        <h3>Women Denim Jacket</h3>
+        <p>₹2,499</p>
+        <div class="size-selector">
+          <label>Size</label>
+          <div class="size-options">
+            <button class="size-btn" onclick="selectSize('shop-6', 'S')">S</button>
+            <button class="size-btn" onclick="selectSize('shop-6', 'M')">M</button>
+            <button class="size-btn" onclick="selectSize('shop-6', 'L')">L</button>
+            <button class="size-btn" onclick="selectSize('shop-6', 'XL')">XL</button>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button onclick="addToCart('Women Denim Jacket', 2499, 'https://images.unsplash.com/photo-1539533018447-63fcce2678e3', 'Jackets', null, 'shop-6')">Add to Cart</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>&copy; 2026 UrbanWear. All rights reserved.</p>
+  <p>Fashion that defines you</p>
+</footer>
+
+<script src="js/main.js"></script>
+<script>
+  // Filter by category
+  function filterCategory(cat) {
+    document.querySelectorAll(".card").forEach(card => {
+      const cardCategory = card.getAttribute('data-category');
+      if (cat === "all" || cardCategory === cat || card.classList.contains(cat)) {
+        card.style.display = "block";
+      } else {
+        card.style.display = "none";
+      }
+    });
+  }
+
+
+  // Check URL params for category filter
+  const urlParams = new URLSearchParams(window.location.search);
+  const category = urlParams.get('category');
+  if (category) {
+    filterCategory(category);
+    document.querySelector('select').value = category;
+  }
+
+  // Make product cards clickable
+  document.querySelectorAll('.card').forEach(card => {
+    const productId = card.getAttribute('data-product-id');
+    if (productId) {
+      const img = card.querySelector('img');
+      const title = card.querySelector('h3');
+      
+      if (img) {
+        img.style.cursor = 'pointer';
+        img.onclick = (e) => {
+          e.stopPropagation();
+          viewProduct(productId);
+        };
+      }
+      
+      if (title) {
+        title.style.cursor = 'pointer';
+        title.onclick = (e) => {
+          e.stopPropagation();
+          viewProduct(productId);
+        };
+      }
+      
+      // Stop propagation on all buttons
+      card.querySelectorAll('button').forEach(btn => {
+        const oldOnclick = btn.getAttribute('onclick');
+        if (oldOnclick) {
+          btn.setAttribute('onclick', `event.stopPropagation(); ${oldOnclick}`);
+        } else {
+          btn.onclick = (e) => e.stopPropagation();
+        }
+      });
+    }
+  });
+  
+  // Update counts on load
+  updateCartCount();
+  updateWishlistCount();
+  updateWishlistButtons();
+</script>
+</body>
+</html>

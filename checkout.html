@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout | Maadhivs Boutique</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .checkout-page {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .checkout-title {
+            font-family: var(--font-heading);
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            color: var(--color-primary);
+        }
+
+        .checkout-container {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 3rem;
+        }
+
+        .checkout-form {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            border: 1px solid var(--color-border);
+        }
+
+        .checkout-form h2 {
+            font-family: var(--font-heading);
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            color: var(--color-primary);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--color-text);
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.8rem;
+            border: 2px solid var(--color-border);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: var(--font-body);
+            transition: var(--transition);
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--color-accent);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .order-summary {
+            background: #f9f9f9;
+            padding: 2rem;
+            border-radius: 12px;
+            height: fit-content;
+            position: sticky;
+            top: 100px;
+        }
+
+        .order-summary h2 {
+            font-family: var(--font-heading);
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            color: var(--color-primary);
+        }
+
+        .order-item {
+            display: flex;
+            gap: 15px;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .order-item:last-child {
+            border-bottom: none;
+        }
+
+        .order-item img {
+            width: 60px;
+            height: 75px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        .order-item-details h4 {
+            font-size: 1rem;
+            margin-bottom: 0.3rem;
+            color: var(--color-primary);
+        }
+
+        .order-item-details p {
+            font-size: 0.9rem;
+            color: var(--color-text-light);
+            margin: 0.2rem 0;
+        }
+
+        .order-total {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 2px solid var(--color-border);
+        }
+
+        .order-total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.8rem;
+            font-size: 1.1rem;
+        }
+
+        .order-total-final {
+            font-weight: 700;
+            font-size: 1.4rem;
+            color: var(--color-accent);
+            margin-top: 1rem;
+        }
+
+        .place-order-btn {
+            width: 100%;
+            padding: 1.2rem;
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: var(--transition);
+            margin-top: 2rem;
+        }
+
+        .place-order-btn:hover {
+            background: var(--color-secondary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .place-order-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        @media (max-width: 768px) {
+            .checkout-container {
+                grid-template-columns: 1fr;
+            }
+
+            .order-summary {
+                position: relative;
+                top: 0;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header  Navigation -->
+    <header class="navbar">
+        <!-- Left -->
+        <div class="nav-left">
+            <span class="hamburger">&#9776;</span>
+            <nav class="nav-links">
+                <a href="men.html" class="active">MEN</a>
+                <a href="women.html" class="active1">WOMEN</a>
+                <a href="services.html">SERVICES</a>
+                <a href="about.html">ABOUT</a>
+                <a href="contact.html">CONTACT</a>
+            </nav>
+        </div>
+
+        <!-- Center -->
+        <div class="nav-logo">
+            <a href="index.html" style="text-decoration: none; color: inherit;">Maadhivs Boutique</a>
+        </div>
+        <div class="nav-right">
+            <div class="search-box">
+                <input type="text" placeholder="What are you looking for?" />
+                <span class="search-icon">🔍</span>
+            </div>
+            <a href="wishlist.html" class="icon wishlist-link"
+                style="font-family: Arial, sans-serif; font-size: 1.5rem; font-weight: 600;">
+
+                wishlist
+                <span class="wishlist-count">0</span>
+            </a>
+            <span class="icon"></span>
+            <a href="cart.html" class="icon">🛒</a>
+        </div>
+    </header>
+
+    <div class="checkout-page">
+        <h1 class="checkout-title">Checkout</h1>
+
+        <div class="checkout-container">
+            <!-- Shipping Form -->
+            <div class="checkout-form">
+                <h2>Shipping Information</h2>
+                <form id="checkoutForm">
+                    <div class="form-group">
+                        <label for="fullName">Full Name *</label>
+                        <input type="text" id="fullName" name="fullName" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="email">Email *</label>
+                            <input type="email" id="email" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Phone Number *</label>
+                            <input type="tel" id="phone" name="phone" required pattern="[0-9]{10}">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="address">Address *</label>
+                        <textarea id="address" name="address" rows="3" required></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="city">City *</label>
+                            <input type="text" id="city" name="city" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="pincode">Pincode *</label>
+                            <input type="text" id="pincode" name="pincode" required pattern="[0-9]{6}">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="state">State *</label>
+                        <input type="text" id="state" name="state" required>
+                    </div>
+
+                    <button type="submit" class="place-order-btn" id="placeOrderBtn">Place Order</button>
+                </form>
+            </div>
+
+            <!-- Order Summary -->
+            <div class="order-summary">
+                <h2>Order Summary</h2>
+                <div id="orderItems"></div>
+                <div class="order-total">
+                    <div class="order-total-row">
+                        <span>Subtotal:</span>
+                        <span id="orderSubtotal">₹0</span>
+                    </div>
+                    <div class="order-total-row">
+                        <span>Shipping:</span>
+                        <span>Free</span>
+                    </div>
+                    <div class="order-total-row order-total-final">
+                        <span>Total:</span>
+                        <span id="orderTotal">₹0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-logo">Maadhivs Boutique</div>
+            <p class="footer-text">Premium Indian Ethnic Wear</p>
+            <p class="footer-text">&copy; 2026 Maadhivs Boutique. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="js/cart.js"></script>
+    <script src="js/wishlist.js"></script>
+    <script src="js/hamburger.js" defer></script>
+    <script>
+        const orderItemsDiv = document.getElementById("orderItems");
+        const orderSubtotalDiv = document.getElementById("orderSubtotal");
+        const orderTotalDiv = document.getElementById("orderTotal");
+        const checkoutForm = document.getElementById("checkoutForm");
+        const placeOrderBtn = document.getElementById("placeOrderBtn");
+
+        let cart = getCart();
+
+        // Redirect if cart is empty
+        if (cart.length === 0) {
+            alert("Your cart is empty!");
+            window.location.href = "cart.html";
+        }
+
+        // Display order summary
+        function displayOrderSummary() {
+            let total = 0;
+
+            cart.forEach(item => {
+                total += item.price * item.quantity;
+
+                const itemDiv = document.createElement("div");
+                itemDiv.className = "order-item";
+                itemDiv.innerHTML = `
+                    <img src="${item.image}" alt="${item.name}">
+                    <div class="order-item-details">
+                        <h4>${item.name}</h4>
+                        <p>Size: ${item.size}</p>
+                        <p>Qty: ${item.quantity} × ₹${item.price.toLocaleString('en-IN')}</p>
+                    </div>
+                `;
+                orderItemsDiv.appendChild(itemDiv);
+            });
+
+            orderSubtotalDiv.textContent = `₹${total.toLocaleString('en-IN')}`;
+            orderTotalDiv.textContent = `₹${total.toLocaleString('en-IN')}`;
+        }
+
+        displayOrderSummary();
+
+        // Handle form submission
+        checkoutForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            // Calculate total amount
+            let totalAmount = 0;
+            cart.forEach(item => {
+                totalAmount += item.price * item.quantity;
+            });
+
+            // Generate unique order ID
+            const generateOrderId = () => {
+                return 'order_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            };
+
+            // Transform cart items to match Order model structure
+            const orderItems = cart.map(item => ({
+                productId: item.id || 'unknown',
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                size: item.size
+            }));
+
+            // Create order object matching admin panel Order model
+            const order = {
+                id: generateOrderId(),
+                customerName: document.getElementById("fullName").value,
+                customerEmail: document.getElementById("email").value,
+                customerPhone: document.getElementById("phone").value,
+                items: orderItems,
+                totalAmount: totalAmount,
+                status: 'Pending',
+                shippingAddress: {
+                    street: document.getElementById("address").value,
+                    city: document.getElementById("city").value,
+                    state: document.getElementById("state").value,
+                    zip: document.getElementById("pincode").value,
+                    country: 'India'
+                },
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            // Save order to admin_orders (shared key with admin panel)
+            try {
+                // Get existing orders from admin_orders key
+                const existingOrders = JSON.parse(localStorage.getItem('admin_orders') || '[]');
+
+                // Add new order
+                existingOrders.push(order);
+
+                // Save back to localStorage
+                localStorage.setItem('admin_orders', JSON.stringify(existingOrders));
+
+                // Also save as lastOrder for backward compatibility (if needed)
+                localStorage.setItem('lastOrder', JSON.stringify({
+                    fullName: order.customerName,
+                    email: order.customerEmail,
+                    phone: order.customerPhone,
+                    address: order.shippingAddress.street,
+                    city: order.shippingAddress.city,
+                    pincode: order.shippingAddress.zip,
+                    state: order.shippingAddress.state,
+                    cart: cart,
+                    orderDate: order.createdAt,
+                    orderId: order.id
+                }));
+
+                // Clear cart
+                localStorage.removeItem("cart");
+
+                // Redirect to success page
+                window.location.href = "success.html";
+            } catch (error) {
+                console.error('Error saving order:', error);
+                alert('There was an error placing your order. Please try again.');
+            }
+        });
+    </script>
+</body>
+
+</html>

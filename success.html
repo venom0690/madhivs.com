@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmation | Maadhivs Boutique</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .success-page {
+            min-height: 70vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .success-container {
+            max-width: 600px;
+            text-align: center;
+            background: white;
+            padding: 3rem 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .success-icon {
+            font-size: 5rem;
+            margin-bottom: 1rem;
+        }
+
+        .success-title {
+            font-family: var(--font-heading);
+            font-size: 2.5rem;
+            color: var(--color-primary);
+            margin-bottom: 1rem;
+        }
+
+        .success-message {
+            font-size: 1.1rem;
+            color: var(--color-text-light);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .order-details {
+            background: #f9f9f9;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        .order-details h3 {
+            font-family: var(--font-heading);
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: var(--color-primary);
+        }
+
+        .order-details p {
+            margin: 0.5rem 0;
+            color: var(--color-text);
+        }
+
+        .order-details strong {
+            color: var(--color-primary);
+        }
+
+        .success-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .success-btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: var(--transition);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-block;
+        }
+
+        .success-btn-primary {
+            background: var(--color-primary);
+            color: white;
+        }
+
+        .success-btn-primary:hover {
+            background: var(--color-secondary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .success-btn-secondary {
+            background: white;
+            color: var(--color-primary);
+            border: 2px solid var(--color-primary);
+        }
+
+        .success-btn-secondary:hover {
+            background: var(--color-primary);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .success-title {
+                font-size: 2rem;
+            }
+
+            .success-buttons {
+                flex-direction: column;
+            }
+
+            .success-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header  Navigation -->
+    <header class="navbar">
+        <!-- Left -->
+        <div class="nav-left">
+            <span class="hamburger">&#9776;</span>
+            <nav class="nav-links">
+                <a href="men.html" class="active">MEN</a>
+                <a href="women.html" class="active1">WOMEN</a>
+                <a href="services.html">SERVICES</a>
+                <a href="about.html">ABOUT</a>
+                <a href="contact.html">CONTACT</a>
+            </nav>
+        </div>
+
+        <!-- Center -->
+        <div class="nav-logo">
+            <a href="index.html" style="text-decoration: none; color: inherit;">Maadhivs Boutique</a>
+        </div>
+        <div class="nav-right">
+            <div class="search-box">
+                <input type="text" placeholder="What are you looking for?" />
+                <span class="search-icon">🔍</span>
+            </div>
+            <a href="wishlist.html" class="icon wishlist-link"
+                style="font-family: Arial, sans-serif; font-size: 1.5rem; font-weight: 600;">
+
+                wishlist
+                <span class="wishlist-count">0</span>
+            </a>
+            <span class="icon"></span>
+            <a href="cart.html" class="icon">🛒</a>
+        </div>
+    </header>
+
+    <div class="success-page">
+        <div class="success-container">
+            <div class="success-icon">✅</div>
+            <h1 class="success-title">Order Placed Successfully!</h1>
+            <p class="success-message">
+                Thank you for shopping with Maadhivs Boutique. Your order has been received and is being processed.
+            </p>
+
+            <div class="order-details" id="orderDetails">
+                <h3>Order Details</h3>
+                <p><strong>Order Date:</strong> <span id="orderDate"></span></p>
+                <p><strong>Name:</strong> <span id="customerName"></span></p>
+                <p><strong>Phone:</strong> <span id="customerPhone"></span></p>
+                <p><strong>Total Amount:</strong> <span id="orderAmount"></span></p>
+            </div>
+
+            <div class="success-buttons">
+                <a href="index.html" class="success-btn success-btn-primary">Continue Shopping</a>
+                <a href="men.html" class="success-btn success-btn-secondary">Browse Collections</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-logo">Maadhivs Boutique</div>
+            <p class="footer-text">Premium Indian Ethnic Wear</p>
+            <p class="footer-text">&copy; 2026 Maadhivs Boutique. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Get last order from localStorage
+        const lastOrder = JSON.parse(localStorage.getItem("lastOrder"));
+
+        if (!lastOrder) {
+            // If no order found, redirect to home
+            window.location.href = "index.html";
+        } else {
+            // Calculate total
+            let total = 0;
+            lastOrder.cart.forEach(item => {
+                total += item.price * item.quantity;
+            });
+
+            // Display order details
+            const orderDate = new Date(lastOrder.orderDate);
+            document.getElementById("orderDate").textContent = orderDate.toLocaleDateString('en-IN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            document.getElementById("customerName").textContent = lastOrder.fullName;
+            document.getElementById("customerPhone").textContent = lastOrder.phone;
+            document.getElementById("orderAmount").textContent = `₹${total.toLocaleString('en-IN')}`;
+        }
+    </script>
+</body>
+
+</html>
