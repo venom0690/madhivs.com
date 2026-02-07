@@ -14,6 +14,7 @@ class Category {
         this.id = data.id || generateId();
         this.name = data.name;
         this.type = data.type; // "Men" | "Women" | "General"
+        this.subCategories = data.subCategories || []; // Array of strings
         this.createdAt = data.createdAt || new Date().toISOString();
         this.updatedAt = data.updatedAt || new Date().toISOString();
     }
@@ -36,7 +37,9 @@ class Product {
         this.name = data.name;
         this.price = parseFloat(data.price);
         this.category = data.category; // Category ID
+        this.subCategory = data.subCategory || ''; // Sub-category name
         this.sizes = data.sizes || []; // Array of strings
+        this.colors = data.colors || []; // Array of strings
         this.stock = parseInt(data.stock) || 0;
         this.description = data.description || '';
         this.primaryImage = data.primaryImage;
@@ -59,8 +62,8 @@ class Product {
         if (!this.category) {
             throw new Error('Category is required');
         }
-        if (!this.sizes || this.sizes.length === 0) {
-            throw new Error('At least one size must be selected');
+        if ((!this.sizes || this.sizes.length === 0) && (!this.colors || this.colors.length === 0)) {
+            throw new Error('At least one size or color must be selected');
         }
         if (!this.primaryImage) {
             throw new Error('Primary image is required');

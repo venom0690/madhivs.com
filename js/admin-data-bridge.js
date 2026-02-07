@@ -41,7 +41,10 @@
      */
     function getAdminHomepageContent() {
         try {
-            const content = JSON.parse(localStorage.getItem('admin_homepage') || '{}');
+            const data = JSON.parse(localStorage.getItem('admin_homepage') || '{}');
+            // Handle both object (legacy) and array (new data service) formats
+            const content = Array.isArray(data) ? (data[0] || {}) : data;
+            
             return {
                 sliderImages: content.sliderImages || [],
                 trendingProductIds: content.trendingProductIds || [],
@@ -187,7 +190,9 @@
             category: category ? category.name.toLowerCase() : 'general',
             categoryId: adminProduct.category,
             categoryName: category ? category.name : 'General',
+            subCategory: adminProduct.subCategory || '',
             sizes: adminProduct.sizes || [],
+            colors: adminProduct.colors || [],
             stock: adminProduct.stock || 0,
             description: adminProduct.description || '',
             isPopular: adminProduct.isPopular || false,

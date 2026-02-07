@@ -61,6 +61,7 @@
 
             <!-- Product Information -->
             <div class="product-detail-info">
+                <p id="productCategory" style="color: var(--color-text-light); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;"></p>
                 <h1 id="productName" class="product-detail-title">Product Name</h1>
                 <p id="productPrice" class="product-detail-price">₹0</p>
 
@@ -78,13 +79,21 @@
                 </div>
 
                 <!-- Size Selector -->
-                <div class="product-selector">
+                <div class="product-selector" id="sizeSelectorContainer">
                     <h4>Select Size</h4>
                     <div class="size-options">
                         <button class="size-btn" data-size="S">S</button>
                         <button class="size-btn active" data-size="M">M</button>
                         <button class="size-btn" data-size="L">L</button>
                         <button class="size-btn" data-size="XL">XL</button>
+                    </div>
+                </div>
+
+                <!-- Color Selector -->
+                <div class="product-selector" id="colorSelectorContainer" style="display: none;">
+                    <h4>Select Color</h4>
+                    <div class="size-options" id="colorOptions">
+                        <!-- Colors will be injected here -->
                     </div>
                 </div>
 
@@ -117,6 +126,7 @@
         </div>
     </footer>
 
+    <script src="js/admin-data-bridge.js"></script>
     <script src="js/product-detail.js"></script>
     <script src="js/cart.js"></script>
     <script src="js/wishlist.js" defer></script>

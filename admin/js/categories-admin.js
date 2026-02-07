@@ -23,10 +23,15 @@ const categoryForm = document.getElementById('categoryForm');
 const categoryIdInput = document.getElementById('categoryId');
 const categoryNameInput = document.getElementById('categoryName');
 const categoryTypeInput = document.getElementById('categoryType');
+const subCategoryInput = document.getElementById('subCategoryInput');
+const subCategoriesList = document.getElementById('subCategoriesList');
 const formError = document.getElementById('formError');
+
+let currentSubCategories = [];
 
 // Modal controls
 document.getElementById('addCategoryBtn').addEventListener('click', openAddModal);
+document.getElementById('addSubCategoryBtn').addEventListener('click', addSubCategory);
 document.getElementById('closeModal').addEventListener('click', closeModal);
 document.getElementById('cancelBtn').addEventListener('click', closeModal);
 document.getElementById('saveBtn').addEventListener('click', saveCategory);
@@ -43,6 +48,8 @@ function openAddModal() {
     modalTitle.textContent = 'Add Category';
     categoryForm.reset();
     categoryIdInput.value = '';
+    currentSubCategories = [];
+    renderSubCategories();
     formError.classList.remove('show');
     formError.textContent = '';
     modal.classList.add('show');
@@ -54,15 +61,45 @@ function openEditModal(category) {
     categoryIdInput.value = category.id;
     categoryNameInput.value = category.name;
     categoryTypeInput.value = category.type;
+    currentSubCategories = category.subCategories || [];
+    renderSubCategories();
     formError.classList.remove('show');
     formError.textContent = '';
     modal.classList.add('show');
 }
 
+function addSubCategory() {
+    const val = subCategoryInput.value.trim();
+    if (val && !currentSubCategories.includes(val)) {
+        currentSubCategories.push(val);
+        subCategoryInput.value = '';
+        renderSubCategories();
+    }
+}
+
+function removeSubCategory(index) {
+    currentSubCategories.splice(index, 1);
+    renderSubCategories();
+}
+
+function renderSubCategories() {
+    subCategoriesList.innerHTML = currentSubCategories.map((sub, index) => `
+        <div style="background: #eee; padding: 2px 8px; border-radius: 12px; display: flex; align-items: center; font-size: 0.9rem;">
+            ${sub}
+            <span onclick="removeSubCategory(${index})" style="margin-left: 6px; cursor: pointer; color: #666; font-weight: bold;">&times;</span>
+        </div>
+    `).join('');
+}
+
+// Make globally accessible
+window.removeSubCategory = removeSubCategory;
+
 // Close modal
 function closeModal() {
     modal.classList.remove('show');
     categoryForm.reset();
+    currentSubCategories = [];
+    renderSubCategories();
 }
 
 // Save category
@@ -85,7 +122,8 @@ function saveCategory() {
     try {
         const categoryData = {
             name: categoryName,
-            type: categoryType
+            type: categoryType,
+            subCategories: currentSubCategories
         };
 
         if (categoryId) {

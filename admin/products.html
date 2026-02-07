@@ -117,10 +117,17 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label" for="productCategory">Category *</label>
+                            <label class="form-label" for="productCategory">Category * <a href="#" id="createCategoryLink" style="font-size: 0.8rem; margin-left: 0.5rem;">+ Create New</a></label>
                             <select id="productCategory" class="form-select" required>
                                 <option value="">Select category</option>
                             </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="productSubCategory">Sub Category <a href="#" id="createSubCategoryLink" style="font-size: 0.8rem; margin-left: 0.5rem;">+ Create New</a></label>
+                        <select id="productSubCategory" class="form-select">
+                            <option value="">Select sub-category</option>
+                        </select>
                         </div>
 
                         <div class="form-group">
@@ -136,27 +143,50 @@
                             placeholder="Enter product description..."></textarea>
                     </div>
 
+                    <!-- Variants Configuration -->
+                    <h4 style="margin: 1.5rem 0 1rem; color: var(--text-primary);">Product Variants</h4>
+                    <div class="checkbox-group" style="margin-bottom: 1rem;">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="hasSizes" checked> Enable Sizes
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="hasColors"> Enable Colors
+                        </label>
+                    </div>
+
                     <!-- Sizes -->
-                    <h4 style="margin: 1.5rem 0 1rem; color: var(--text-primary);">Available Sizes *</h4>
-                    <div class="checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="size" value="S"> S
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="size" value="M"> M
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="size" value="L"> L
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="size" value="XL"> XL
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="size" value="XXL"> XXL
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="size" value="Free Size"> Free Size
-                        </label>
+                    <div id="sizesSection">
+                        <h5 style="margin: 0.5rem 0; color: var(--text-secondary);">Select Sizes</h5>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="size" value="S"> S
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="size" value="M"> M
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="size" value="L"> L
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="size" value="XL"> XL
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="size" value="XXL"> XXL
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="size" value="Free Size"> Free Size
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Colors -->
+                    <div id="colorsSection" style="display: none; margin-top: 1rem;">
+                        <h5 style="margin: 0.5rem 0; color: var(--text-secondary);">Select Available Colors</h5>
+                        <div class="color-swatches-container" id="colorSwatchesContainer" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            <!-- Swatches injected by JS -->
+                        </div>
+                        <input type="hidden" id="productColors">
+                        <div id="selectedColorsDisplay" style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-secondary);"></div>
                     </div>
 
                     <!-- Images -->

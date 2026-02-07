@@ -22,7 +22,7 @@
          * @returns {HTMLElement} Product card element
          */
         function createProductCard(product) {
-            const productLink = `product.html?name=${encodeURIComponent(product.name)}&price=${product.price}&image=${encodeURIComponent(product.image)}`;
+            const productLink = `product.html?id=${product.id}&name=${encodeURIComponent(product.name)}&price=${product.price}&image=${encodeURIComponent(product.image)}`;
             const imageUrl = `${product.image}?w=600&q=80`;
 
             const card = document.createElement('a');

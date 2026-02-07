@@ -5,6 +5,27 @@
 // Auth guard
 authService.requireAuth();
 
+// State
+const selectedColors = new Set();
+const colorPalette = [
+    { name: 'Red', hex: '#FF0000' },
+    { name: 'Blue', hex: '#0000FF' },
+    { name: 'Green', hex: '#008000' },
+    { name: 'Yellow', hex: '#FFFF00' },
+    { name: 'Black', hex: '#000000' },
+    { name: 'White', hex: '#FFFFFF' },
+    { name: 'Pink', hex: '#FFC0CB' },
+    { name: 'Purple', hex: '#800080' },
+    { name: 'Orange', hex: '#FFA500' },
+    { name: 'Grey', hex: '#808080' },
+    { name: 'Brown', hex: '#A52A2A' },
+    { name: 'Beige', hex: '#F5F5DC' },
+    { name: 'Navy', hex: '#000080' },
+    { name: 'Maroon', hex: '#800000' },
+    { name: 'Gold', hex: '#FFD700' },
+    { name: 'Silver', hex: '#C0C0C0' }
+];
+
 // Load user info
 const user = authService.getCurrentUser();
 if (user) {
@@ -27,12 +48,32 @@ const productIdInput = document.getElementById('productId');
 const productNameInput = document.getElementById('productName');
 const productPriceInput = document.getElementById('productPrice');
 const productCategoryInput = document.getElementById('productCategory');
+const productSubCategoryInput = document.getElementById('productSubCategory');
+const createCategoryLink = document.getElementById('createCategoryLink');
+const createSubCategoryLink = document.getElementById('createSubCategoryLink');
 const productStockInput = document.getElementById('productStock');
 const productDescriptionInput = document.getElementById('productDescription');
 const primaryImageUrlInput = document.getElementById('primaryImageUrl');
 const primaryImageFileInput = document.getElementById('primaryImageFile');
 const primaryImagePreview = document.getElementById('primaryImagePreview');
 const subImagesPreview = document.getElementById('subImagesPreview');
+
+// Variants elements
+const hasSizesCheckbox = document.getElementById('hasSizes');
+const hasColorsCheckbox = document.getElementById('hasColors');
+const sizesSection = document.getElementById('sizesSection');
+const colorsSection = document.getElementById('colorsSection');
+const productColorsInput = document.getElementById('productColors');
+const colorSwatchesContainer = document.getElementById('colorSwatchesContainer');
+
+// Variant Toggles
+hasSizesCheckbox.addEventListener('change', () => {
+    sizesSection.style.display = hasSizesCheckbox.checked ? 'block' : 'none';
+});
+
+hasColorsCheckbox.addEventListener('change', () => {
+    colorsSection.style.display = hasColorsCheckbox.checked ? 'block' : 'none';
+});
 
 // Flags
 const isTrendingInput = document.getElementById('isTrending');
@@ -58,6 +99,94 @@ modal.addEventListener('click', (e) => {
 primaryImageUrlInput.addEventListener('input', updatePrimaryImagePreview);
 primaryImageFileInput.addEventListener('change', handlePrimaryImageFile);
 
+// Category/SubCategory Handlers
+productCategoryInput.addEventListener('change', function() {
+    loadSubCategories(this.value);
+});
+
+if (createCategoryLink) {
+    createCategoryLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (confirm('Leave this page to create a new category? Unsaved changes will be lost.')) {
+            window.location.href = 'categories.html';
+        }
+    });
+}
+
+if (createSubCategoryLink) {
+    createSubCategoryLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        const categoryId = productCategoryInput.value;
+        if (!categoryId) {
+            alert('Please select a category first.');
+            return;
+        }
+        
+        const newSub = prompt('Enter new sub-category name:');
+        if (newSub && newSub.trim()) {
+            const category = dataService.getCategoryById(categoryId);
+            if (category) {
+                // Initialize subCategories if missing
+                if (!category.subCategories) category.subCategories = [];
+                
+                // Add if not exists
+                if (!category.subCategories.includes(newSub.trim())) {
+                    category.subCategories.push(newSub.trim());
+                    dataService.updateCategory(categoryId, category);
+                    
+                    // Reload dropdown and select new value
+                    loadSubCategories(categoryId, newSub.trim());
+                    alert('Sub-category added!');
+                } else {
+                    alert('Sub-category already exists.');
+                }
+            }
+        }
+    });
+}
+
+// Color Swatch Logic
+function renderColorSwatches() {
+    if (!colorSwatchesContainer) return;
+    colorSwatchesContainer.innerHTML = '';
+    
+    colorPalette.forEach(color => {
+        const div = document.createElement('div');
+        const isSelected = selectedColors.has(color.name);
+        
+        div.style.cssText = `
+            width: 32px; 
+            height: 32px; 
+            border-radius: 50%; 
+            background-color: ${color.hex}; 
+            cursor: pointer; 
+            border: 2px solid ${isSelected ? '#000' : '#ddd'};
+            box-shadow: ${isSelected ? '0 0 5px rgba(0,0,0,0.3)' : 'none'};
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        `;
+        div.title = color.name;
+        
+        if (isSelected) {
+            div.innerHTML = `<span style="color: ${['White', 'Yellow', 'Beige'].includes(color.name) ? '#000' : '#fff'}; font-weight: bold; font-size: 14px;">✓</span>`;
+        }
+        
+        div.onclick = () => toggleColor(color.name);
+        colorSwatchesContainer.appendChild(div);
+    });
+}
+
+function toggleColor(colorName) {
+    if (selectedColors.has(colorName)) {
+        selectedColors.delete(colorName);
+    } else {
+        selectedColors.add(colorName);
+    }
+    renderColorSwatches();
+}
+
 // Load categories into dropdown
 function loadCategoryDropdown() {
     const categories = dataService.getCategories();
@@ -71,18 +200,53 @@ function loadCategoryDropdown() {
         option.textContent = `${category.name} (${category.type})`;
         select.appendChild(option);
     });
+    // Load sub-categories if category selected
+    if (productIdInput.value && productCategoryInput.value) {
+        // Wait for category to be set
+        setTimeout(() => {
+             loadSubCategories(productCategoryInput.value, productSubCategoryInput.dataset.selectedValue);
+        }, 100);
+    }
+}
+
+function loadSubCategories(categoryId, selectedSub = null) {
+    productSubCategoryInput.innerHTML = '<option value="">Select sub-category</option>';
+    if (!categoryId) return;
+    
+    const category = dataService.getCategoryById(categoryId);
+    if (category && category.subCategories) {
+        category.subCategories.forEach(sub => {
+            const option = document.createElement('option');
+            option.value = sub;
+            option.textContent = sub;
+            if (selectedSub === sub) option.selected = true;
+            productSubCategoryInput.appendChild(option);
+        });
+    }
 }
 
 // Open add modal
 function openAddModal() {
     modalTitle.textContent = 'Add Product';
     productForm.reset();
+    
+    // Reset variants defaults
+    hasSizesCheckbox.checked = true;
+    hasColorsCheckbox.checked = false;
+    sizesSection.style.display = 'block';
+    colorsSection.style.display = 'none';
+    selectedColors.clear();
+    renderColorSwatches();
+    
     productIdInput.value = '';
+    productSubCategoryInput.innerHTML = '<option value="">Select sub-category</option>';
+    productSubCategoryInput.dataset.selectedValue = ''; // Reset dataset
     formError.classList.remove('show');
     formError.textContent = '';
     primaryImagePreview.innerHTML = '';
     subImagesPreview.innerHTML = '';
     loadCategoryDropdown();
+    
     modal.classList.add('show');
 }
 
@@ -93,14 +257,39 @@ function openEditModal(product) {
     productNameInput.value = product.name;
     productPriceInput.value = product.price;
     productCategoryInput.value = product.category;
+    
+    // Store sub-category for later loading
+    productSubCategoryInput.dataset.selectedValue = product.subCategory || '';
+    
     productStockInput.value = product.stock;
     productDescriptionInput.value = product.description;
 
+    // Set variants
+    const hasSizes = product.sizes && product.sizes.length > 0;
+    const hasColors = product.colors && product.colors.length > 0;
+    
+    // If neither (legacy data), assume sizes if sizes exist, otherwise default to sizes enabled?
+    // Actually if sizes array is empty but it was a product that required sizes, it might be weird.
+    // But logic says: check if array has items.
+    
+    hasSizesCheckbox.checked = hasSizes;
+    hasColorsCheckbox.checked = hasColors;
+    
+    sizesSection.style.display = hasSizes ? 'block' : 'none';
+    colorsSection.style.display = hasColors ? 'block' : 'none';
+
     // Set sizes
     document.querySelectorAll('input[name="size"]').forEach(checkbox => {
-        checkbox.checked = product.sizes.includes(checkbox.value);
+        checkbox.checked = product.sizes ? product.sizes.includes(checkbox.value) : false;
     });
 
+    // Set colors
+    selectedColors.clear();
+    if (product.colors && product.colors.length > 0) {
+        product.colors.forEach(c => selectedColors.add(c));
+    }
+    renderColorSwatches();
+    
     // Set flags
     isTrendingInput.checked = product.isTrending;
     isPopularInput.checked = product.isPopular;
@@ -246,12 +435,16 @@ async function saveProduct() {
     const productName = productNameInput.value.trim();
     const productPrice = parseFloat(productPriceInput.value);
     const productCategory = productCategoryInput.value;
+    const productSubCategory = productSubCategoryInput.value;
     const productStock = parseInt(productStockInput.value);
     const productDescription = productDescriptionInput.value.trim();
 
     // Get selected sizes
     const sizes = Array.from(document.querySelectorAll('input[name="size"]:checked'))
         .map(cb => cb.value);
+    
+    // Get selected colors
+    const colors = Array.from(selectedColors);
 
     // Get primary image
     const primaryImage = primaryImageUrlInput.value.trim();
@@ -277,8 +470,18 @@ async function saveProduct() {
         return;
     }
 
-    if (sizes.length === 0) {
+    if (!hasSizesCheckbox.checked && !hasColorsCheckbox.checked) {
+        showError('At least one variant type (Size or Color) must be enabled');
+        return;
+    }
+
+    if (hasSizesCheckbox.checked && sizes.length === 0) {
         showError('At least one size must be selected');
+        return;
+    }
+
+    if (hasColorsCheckbox.checked && colors.length === 0) {
+        showError('At least one color must be entered');
         return;
     }
 
@@ -297,9 +500,11 @@ async function saveProduct() {
             name: productName,
             price: productPrice,
             category: productCategory,
+            subCategory: productSubCategory,
             stock: productStock,
             description: productDescription,
             sizes: sizes,
+            colors: colors,
             primaryImage: primaryImage,
             subImages: subImageUrls,
             isTrending: isTrendingInput.checked,
