@@ -1,227 +1,243 @@
 /**
  * Admin Data Bridge
- * Connects customer website to admin panel data
+ * Connects customer website to backend API
  * Single source of truth for all product and content data
  */
 
 (function (window) {
     'use strict';
 
+    const API_BASE_URL = window.location.origin + '/api';
+
+    // Cache for API responses
+    let productsCache = null;
+    let categoriesCache = null;
+    let homepageCache = null;
+    let cacheTimestamp = 0;
+    const CACHE_DURATION = 60000; // 1 minute cache
+
     /**
-     * Get all products from admin panel
-     * @returns {Array} Array of product objects
+     * Check if cache is valid
      */
-    function getAdminProducts() {
+    function isCacheValid() {
+        return Date.now() - cacheTimestamp < CACHE_DURATION;
+    }
+
+    /**
+     * Clear cache
+     */
+    function clearCache() {
+        productsCache = null;
+        categoriesCache = null;
+        homepageCache = null;
+        cacheTimestamp = 0;
+    }
+
+    /**
+     * Fetch wrapper with error handling
+     */
+    async function fetchAPI(endpoint) {
         try {
-            const products = JSON.parse(localStorage.getItem('admin_products') || '[]');
-            return products;
+            const response = await fetch(`${API_BASE_URL}${endpoint}`);
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || 'API request failed');
+            }
+            return data;
         } catch (error) {
-            console.error('Error loading admin products:', error);
-            return [];
+            console.error(`API Error (${endpoint}):`, error.message);
+            return null;
         }
     }
 
     /**
-     * Get all categories from admin panel
-     * @returns {Array} Array of category objects
+     * Get all products from API
+     * @returns {Promise<Array>} Array of product objects
      */
-    function getAdminCategories() {
-        try {
-            const categories = JSON.parse(localStorage.getItem('admin_categories') || '[]');
-            return categories;
-        } catch (error) {
-            console.error('Error loading admin categories:', error);
-            return [];
+    async function getAdminProducts() {
+        if (productsCache && isCacheValid()) {
+            return productsCache;
         }
+
+        const result = await fetchAPI('/products?limit=1000');
+        if (result && result.data) {
+            productsCache = result.data.products;
+            cacheTimestamp = Date.now();
+            return productsCache;
+        }
+        return [];
     }
 
     /**
-     * Get homepage content from admin panel
-     * @returns {Object} Homepage content object
+     * Get all categories from API
+     * @returns {Promise<Array>} Array of category objects
      */
-    function getAdminHomepageContent() {
-        try {
-            const data = JSON.parse(localStorage.getItem('admin_homepage') || '{}');
-            // Handle both object (legacy) and array (new data service) formats
-            const content = Array.isArray(data) ? (data[0] || {}) : data;
-            
-            return {
-                sliderImages: content.sliderImages || [],
-                trendingProductIds: content.trendingProductIds || [],
-                popularProductIds: content.popularProductIds || []
-            };
-        } catch (error) {
-            console.error('Error loading homepage content:', error);
-            return {
-                sliderImages: [],
-                trendingProductIds: [],
-                popularProductIds: []
-            };
+    async function getAdminCategories() {
+        if (categoriesCache && isCacheValid()) {
+            return categoriesCache;
         }
+
+        const result = await fetchAPI('/categories');
+        if (result && result.data) {
+            categoriesCache = result.data.categories;
+            cacheTimestamp = Date.now();
+            return categoriesCache;
+        }
+        return [];
+    }
+
+    /**
+     * Get homepage content from API
+     * @returns {Promise<Object>} Homepage content object
+     */
+    async function getAdminHomepageContent() {
+        if (homepageCache && isCacheValid()) {
+            return homepageCache;
+        }
+
+        const result = await fetchAPI('/homepage');
+        if (result && result.data) {
+            homepageCache = result.data;
+            cacheTimestamp = Date.now();
+            return homepageCache;
+        }
+        return {
+            sliderImages: [],
+            trendingProducts: [],
+            popularProducts: []
+        };
     }
 
     /**
      * Get category by ID
-     * @param {string} categoryId - Category ID
-     * @returns {Object|null} Category object or null
      */
-    function getAdminCategoryById(categoryId) {
-        const categories = getAdminCategories();
-        return categories.find(cat => cat.id === categoryId) || null;
+    async function getAdminCategoryById(categoryId) {
+        const categories = await getAdminCategories();
+        return categories.find(cat => cat._id === categoryId) || null;
     }
 
     /**
      * Get product by ID
-     * @param {string} productId - Product ID
-     * @returns {Object|null} Product object or null
      */
-    function getAdminProductById(productId) {
-        const products = getAdminProducts();
-        return products.find(prod => prod.id === productId) || null;
+    async function getAdminProductById(productId) {
+        const products = await getAdminProducts();
+        return products.find(prod => prod._id === productId) || null;
     }
 
     /**
      * Get products by category ID
-     * @param {string} categoryId - Category ID
-     * @returns {Array} Array of products
      */
-    function getAdminProductsByCategory(categoryId) {
-        const products = getAdminProducts();
-        return products.filter(prod => prod.category === categoryId);
+    async function getAdminProductsByCategory(categoryId) {
+        const products = await getAdminProducts();
+        return products.filter(prod => prod.category?._id === categoryId || prod.category === categoryId);
     }
 
     /**
-     * Get products by category type (Men/Women)
-     * @param {string} type - Category type ('Men' or 'Women')
-     * @returns {Array} Array of products
+     * Get products by category type (Men/Women/General)
      */
-    function getAdminProductsByCategoryType(type) {
-        const products = getAdminProducts();
-        const categories = getAdminCategories();
-        const categoryIds = categories
-            .filter(cat => cat.type === type)
-            .map(cat => cat.id);
-
-        return products.filter(prod => categoryIds.includes(prod.category));
+    async function getAdminProductsByCategoryType(type) {
+        const products = await getAdminProducts();
+        return products.filter(prod => prod.category?.type === type);
     }
 
     /**
-     * Get trending products from admin panel
-     * @returns {Array} Array of trending products
+     * Get trending products
      */
-    function getAdminTrendingProducts() {
-        const homepage = getAdminHomepageContent();
-        const products = getAdminProducts();
-
-        // If admin has configured trending products, use those
-        if (homepage.trendingProductIds && homepage.trendingProductIds.length > 0) {
-            return homepage.trendingProductIds
-                .map(id => products.find(p => p.id === id))
-                .filter(p => p !== undefined);
+    async function getAdminTrendingProducts() {
+        const homepage = await getAdminHomepageContent();
+        if (homepage.trendingProducts && homepage.trendingProducts.length > 0) {
+            return homepage.trendingProducts;
         }
-
-        // Fallback: use products marked as trending
+        // Fallback: get products marked as trending
+        const products = await getAdminProducts();
         return products.filter(prod => prod.isTrending === true);
     }
 
     /**
-     * Get popular products from admin panel
-     * @returns {Array} Array of popular products
+     * Get popular products
      */
-    function getAdminPopularProducts() {
-        const homepage = getAdminHomepageContent();
-        const products = getAdminProducts();
-
-        // If admin has configured popular products, use those
-        if (homepage.popularProductIds && homepage.popularProductIds.length > 0) {
-            return homepage.popularProductIds
-                .map(id => products.find(p => p.id === id))
-                .filter(p => p !== undefined);
+    async function getAdminPopularProducts() {
+        const homepage = await getAdminHomepageContent();
+        if (homepage.popularProducts && homepage.popularProducts.length > 0) {
+            return homepage.popularProducts;
         }
-
-        // Fallback: use products marked as popular
+        // Fallback: get products marked as popular
+        const products = await getAdminProducts();
         return products.filter(prod => prod.isPopular === true);
     }
 
     /**
      * Get men's collection products
-     * @returns {Array} Array of men's products
      */
-    function getAdminMenProducts() {
-        const products = getAdminProducts();
+    async function getAdminMenProducts() {
+        const products = await getAdminProducts();
         return products.filter(prod => prod.isMenCollection === true);
     }
 
     /**
      * Get women's collection products
-     * @returns {Array} Array of women's products
      */
-    function getAdminWomenProducts() {
-        const products = getAdminProducts();
+    async function getAdminWomenProducts() {
+        const products = await getAdminProducts();
         return products.filter(prod => prod.isWomenCollection === true);
     }
 
     /**
-     * Get slider images from admin panel
-     * @returns {Array} Array of active slider images
+     * Get slider images
      */
-    function getAdminSliderImages() {
-        const homepage = getAdminHomepageContent();
-        return homepage.sliderImages
-            .filter(img => img.isActive === true)
-            .sort((a, b) => a.order - b.order);
+    async function getAdminSliderImages() {
+        const homepage = await getAdminHomepageContent();
+        return homepage.sliderImages || [];
     }
 
     /**
-     * Transform admin product to website format
-     * @param {Object} adminProduct - Admin product object
-     * @returns {Object} Website-formatted product
+     * Transform product for website display
      */
-    function transformProductForWebsite(adminProduct) {
-        const category = getAdminCategoryById(adminProduct.category);
-
+    function transformProductForWebsite(product) {
+        const category = product.category;
         return {
-            id: adminProduct.id,
-            name: adminProduct.name,
-            price: adminProduct.price.toString(),
-            priceFormatted: `₹${adminProduct.price.toLocaleString('en-IN')}`,
-            image: adminProduct.primaryImage,
-            subImages: adminProduct.subImages || [],
-            category: category ? category.name.toLowerCase() : 'general',
-            categoryId: adminProduct.category,
-            categoryName: category ? category.name : 'General',
-            subCategory: adminProduct.subCategory || '',
-            sizes: adminProduct.sizes || [],
-            colors: adminProduct.colors || [],
-            stock: adminProduct.stock || 0,
-            description: adminProduct.description || '',
-            isPopular: adminProduct.isPopular || false,
-            isTrending: adminProduct.isTrending || false,
-            isMenCollection: adminProduct.isMenCollection || false,
-            isWomenCollection: adminProduct.isWomenCollection || false
+            id: product._id,
+            name: product.name,
+            slug: product.slug,
+            price: product.price.toString(),
+            priceFormatted: `₹${product.price.toLocaleString('en-IN')}`,
+            discountPrice: product.discountPrice,
+            image: product.primaryImage,
+            subImages: product.images || [],
+            category: category?.name?.toLowerCase() || 'general',
+            categoryId: category?._id || product.category,
+            categoryName: category?.name || 'General',
+            categoryType: category?.type || 'General',
+            subCategory: product.subCategory || '',
+            sizes: product.sizes || [],
+            colors: product.colors || [],
+            stock: product.stock || 0,
+            description: product.description || '',
+            isPopular: product.isPopular || false,
+            isTrending: product.isTrending || false,
+            isFeatured: product.isFeatured || false,
+            isMenCollection: product.isMenCollection || false,
+            isWomenCollection: product.isWomenCollection || false
         };
     }
 
     /**
      * Get all products in website format
-     * @returns {Array} Array of website-formatted products
      */
-    function getWebsiteProducts() {
-        const adminProducts = getAdminProducts();
-        return adminProducts.map(transformProductForWebsite);
+    async function getWebsiteProducts() {
+        const products = await getAdminProducts();
+        return products.map(transformProductForWebsite);
     }
 
     /**
-     * Search products by query
-     * @param {string} query - Search query
-     * @returns {Array} Array of matching products
+     * Search products
      */
-    function searchAdminProducts(query) {
+    async function searchAdminProducts(query) {
         if (!query || query.trim() === '') {
             return [];
         }
 
-        const products = getWebsiteProducts();
+        const products = await getWebsiteProducts();
         const searchTerm = query.toLowerCase().trim();
 
         return products.filter(product => {
@@ -233,41 +249,41 @@
     }
 
     /**
-     * Check if admin data exists
-     * @returns {boolean} True if admin has added data
+     * Check if data exists
      */
-    function hasAdminData() {
-        const products = getAdminProducts();
+    async function hasAdminData() {
+        const products = await getAdminProducts();
         return products.length > 0;
     }
 
     // Expose functions to global scope
     window.AdminDataBridge = {
-        // Core getters
+        // Core getters (async)
         getProducts: getAdminProducts,
         getCategories: getAdminCategories,
         getHomepageContent: getAdminHomepageContent,
 
-        // Specific getters
+        // Specific getters (async)
         getProductById: getAdminProductById,
         getCategoryById: getAdminCategoryById,
         getProductsByCategory: getAdminProductsByCategory,
         getProductsByCategoryType: getAdminProductsByCategoryType,
 
-        // Collection getters
+        // Collection getters (async)
         getTrendingProducts: getAdminTrendingProducts,
         getPopularProducts: getAdminPopularProducts,
         getMenProducts: getAdminMenProducts,
         getWomenProducts: getAdminWomenProducts,
 
-        // Homepage
+        // Homepage (async)
         getSliderImages: getAdminSliderImages,
 
         // Utilities
         transformProduct: transformProductForWebsite,
         getWebsiteProducts: getWebsiteProducts,
         searchProducts: searchAdminProducts,
-        hasData: hasAdminData
+        hasData: hasAdminData,
+        clearCache: clearCache
     };
 
 })(window);
