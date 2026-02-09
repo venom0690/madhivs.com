@@ -6,7 +6,7 @@
 const API_BASE_URL = window.location.origin + '/api';
 
 const authService = {
-    TOKEN_KEY: 'admin_auth_token',
+    TOKEN_KEY: 'adminToken',
     USER_KEY: 'admin_user',
 
     // Login with real backend
@@ -27,10 +27,11 @@ const authService = {
             }
 
             // Store token and user info
+            // Backend returns: { status, token, admin: { id, name, email } }
             localStorage.setItem(this.TOKEN_KEY, data.token);
-            localStorage.setItem(this.USER_KEY, JSON.stringify(data.data.user));
+            localStorage.setItem(this.USER_KEY, JSON.stringify(data.admin));
 
-            return data.data.user;
+            return data.admin;
         } catch (error) {
             console.error('Login error:', error);
             throw error;
@@ -104,8 +105,9 @@ const authService = {
                 return false;
             }
 
+            // Backend returns: { status, admin: { id, name, email, created_at } }
             const data = await response.json();
-            localStorage.setItem(this.USER_KEY, JSON.stringify(data.data.user));
+            localStorage.setItem(this.USER_KEY, JSON.stringify(data.admin));
             return true;
         } catch (error) {
             console.error('Token verification error:', error);

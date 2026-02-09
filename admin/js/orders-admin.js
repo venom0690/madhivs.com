@@ -1,5 +1,6 @@
 /**
  * Orders Management Logic
+ * Fixed with proper async/await for API calls
  */
 
 // Auth guard
@@ -29,11 +30,11 @@ function closeModal() {
     modal.classList.remove('show');
 }
 
-// Update order status
-function updateOrderStatus(orderId, newStatus) {
+// Update order status - FIXED with async/await
+async function updateOrderStatus(orderId, newStatus) {
     try {
-        dataService.updateOrderStatus(orderId, newStatus);
-        loadOrders();
+        await dataService.updateOrderStatus(orderId, newStatus);
+        await loadOrders();
     } catch (error) {
         alert(error.message);
     }
@@ -42,23 +43,27 @@ function updateOrderStatus(orderId, newStatus) {
 // View order details
 function viewOrderDetails(order) {
     const container = document.getElementById('orderDetailsContainer');
+    const orderId = order.id;
+    const orderStatus = order.orderStatus || order.order_status || 'Pending';
 
     container.innerHTML = `
         <div style="margin-bottom: 1.5rem;">
             <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">Order Information</h4>
             <div style="display: grid; grid-template-columns: 150px 1fr; gap: 0.5rem; font-size: 14px;">
                 <div style="color: var(--text-secondary);">Order ID:</div>
-                <div><strong>${order.id}</strong></div>
+                <div><strong>${order.orderNumber || orderId}</strong></div>
                 
                 <div style="color: var(--text-secondary);">Date:</div>
                 <div>${new Date(order.createdAt).toLocaleString()}</div>
                 
                 <div style="color: var(--text-secondary);">Status:</div>
                 <div>
-                    <select class="form-select" style="max-width: 200px;" onchange="updateOrderStatus('${order.id}', this.value)">
-                        <option value="Pending" ${order.status === 'Pending' ? 'selected' : ''}>Pending</option>
-                        <option value="Shipped" ${order.status === 'Shipped' ? 'selected' : ''}>Shipped</option>
-                        <option value="Delivered" ${order.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
+                    <select class="form-select" style="max-width: 200px;" onchange="updateOrderStatus('${orderId}', this.value)">
+                        <option value="Pending" ${orderStatus === 'Pending' ? 'selected' : ''}>Pending</option>
+                        <option value="Processing" ${orderStatus === 'Processing' ? 'selected' : ''}>Processing</option>
+                        <option value="Shipped" ${orderStatus === 'Shipped' ? 'selected' : ''}>Shipped</option>
+                        <option value="Delivered" ${orderStatus === 'Delivered' ? 'selected' : ''}>Delivered</option>
+                        <option value="Cancelled" ${orderStatus === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
                     </select>
                 </div>
             </div>
@@ -68,13 +73,13 @@ function viewOrderDetails(order) {
             <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">Customer Information</h4>
             <div style="display: grid; grid-template-columns: 150px 1fr; gap: 0.5rem; font-size: 14px;">
                 <div style="color: var(--text-secondary);">Name:</div>
-                <div>${order.customerName}</div>
+                <div>${order.customerInfo?.name || order.customerName || 'N/A'}</div>
                 
                 <div style="color: var(--text-secondary);">Email:</div>
-                <div>${order.customerEmail}</div>
+                <div>${order.customerInfo?.email || order.customerEmail || 'N/A'}</div>
                 
                 <div style="color: var(--text-secondary);">Phone:</div>
-                <div>${order.customerPhone || 'N/A'}</div>
+                <div>${order.customerInfo?.phone || order.customerPhone || 'N/A'}</div>
                 
                 <div style="color: var(--text-secondary);">Address:</div>
                 <div>${formatAddress(order.shippingAddress)}</div>
@@ -122,91 +127,127 @@ function formatAddress(address) {
     }
 
     const parts = [
-        address.street,
+        address.street || address.addressLine1,
         address.city,
         address.state,
-        address.zip,
+        address.zip || address.zipCode || address.pincode,
         address.country
     ].filter(part => part);
 
     return parts.join(', ') || 'N/A';
 }
 
-// Load orders table
-function loadOrders() {
+// Load orders table - FIXED with async/await
+async function loadOrders() {
     const statusFilter = document.getElementById('statusFilter').value;
-    let orders = dataService.getOrders();
-
-    // Apply filter
-    if (statusFilter !== 'All') {
-        orders = orders.filter(order => order.status === statusFilter);
-    }
-
-    // Sort by date (newest first)
-    orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
     const container = document.getElementById('ordersTableContainer');
 
-    if (orders.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">🛒</div>
-                <div class="empty-state-text">No orders found</div>
+    try {
+        let orders = await dataService.getOrders();
+
+        // Apply filter
+        if (statusFilter !== 'All') {
+            orders = orders.filter(order => (order.orderStatus || order.status) === statusFilter);
+        }
+
+        // Sort by date (newest first)
+        orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        if (orders.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🛒</div>
+                    <div class="empty-state-text">No orders found</div>
+                </div>
+            `;
+            return;
+        }
+
+        const tableHTML = `
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Customer</th>
+                            <th>Email</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${orders.map(order => {
+            const orderId = order.id;
+            const orderStatus = order.orderStatus || order.order_status || 'Pending';
+            const customerName = order.customerInfo?.name || order.customer_name || 'N/A';
+            const customerEmail = order.customerInfo?.email || order.customer_email || 'N/A';
+
+            return `
+                            <tr>
+                                <td><strong>${order.orderNumber || orderId}</strong></td>
+                                <td>${customerName}</td>
+                                <td>${customerEmail}</td>
+                                <td>${order.items.length} item(s)</td>
+                                <td><strong>₹${order.totalAmount.toLocaleString()}</strong></td>
+                                <td>
+                                    <span class="badge ${orderStatus === 'Delivered' ? 'badge-success' :
+                    orderStatus === 'Shipped' ? 'badge-warning' :
+                        orderStatus === 'Cancelled' ? 'badge-danger' :
+                            'badge-primary'
+                }">
+                                        ${orderStatus}
+                                    </span>
+                                </td>
+                                <td>${new Date(order.createdAt).toLocaleDateString()}</td>
+                                <td>
+                                    <button class="btn btn-secondary btn-sm" onclick='viewOrderById("${orderId}")'>
+                                        View Details
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+        }).join('')}
+                    </tbody>
+                </table>
             </div>
         `;
-        return;
+
+        container.innerHTML = tableHTML;
+    } catch (error) {
+        console.error('Error loading orders:', error);
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">⚠️</div>
+                <div class="empty-state-text">Failed to load orders</div>
+                <div>${error.message}</div>
+                <button class="btn btn-primary mt-1" onclick="loadOrders()">Retry</button>
+            </div>
+        `;
     }
+}
 
-    const tableHTML = `
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Order ID</th>
-                        <th>Customer</th>
-                        <th>Email</th>
-                        <th>Items</th>
-                        <th>Total</th>
-                        <th>Status</th>
-                        <th>Date</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${orders.map(order => `
-                        <tr>
-                            <td><strong>${order.id.substring(0, 12)}...</strong></td>
-                            <td>${order.customerName}</td>
-                            <td>${order.customerEmail}</td>
-                            <td>${order.items.length} item(s)</td>
-                            <td><strong>₹${order.totalAmount.toLocaleString()}</strong></td>
-                            <td>
-                                <span class="badge ${order.status === 'Delivered' ? 'badge-success' :
-            order.status === 'Shipped' ? 'badge-warning' :
-                'badge-danger'
-        }">
-                                    ${order.status}
-                                </span>
-                            </td>
-                            <td>${new Date(order.createdAt).toLocaleDateString()}</td>
-                            <td>
-                                <button class="btn btn-secondary btn-sm" onclick='viewOrderDetails(${JSON.stringify(order).replace(/'/g, "&apos;")})'>
-                                    View Details
-                                </button>
-                            </td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        </div>
-    `;
-
-    container.innerHTML = tableHTML;
+// View order by ID (fetch fresh data)
+async function viewOrderById(orderId) {
+    try {
+        const order = await dataService.getOrderById(orderId);
+        if (order) {
+            viewOrderDetails(order);
+        } else {
+            alert('Order not found');
+        }
+    } catch (error) {
+        alert('Failed to load order: ' + error.message);
+    }
 }
 
 // Make functions globally accessible
 window.viewOrderDetails = viewOrderDetails;
+window.viewOrderById = viewOrderById;
 window.updateOrderStatus = updateOrderStatus;
+window.loadOrders = loadOrders;
 
 // Initialize
 loadOrders();

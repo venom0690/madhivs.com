@@ -1,321 +1,307 @@
 /**
- * Data Service Layer for Admin Panel
- * Production API-based implementation
- * Replaces localStorage with real backend API calls
+ * Data Service - Admin Panel API Layer
+ * Handles all API communication for the admin panel
+ * Aligned with MySQL backend response shapes
  */
 
-const API_BASE_URL = window.location.origin + '/api';
+const dataService = (function () {
+    'use strict';
 
-const dataService = {
-    // Get auth token
-    _getToken() {
-        return localStorage.getItem('admin_auth_token');
-    },
+    const API_BASE = window.location.origin + '/api';
 
-    // API request helper
-    async _request(endpoint, options = {}) {
-        const token = this._getToken();
-        const headers = {
-            'Content-Type': 'application/json',
-            ...(token && { 'Authorization': `Bearer ${token}` }),
-            ...options.headers,
-        };
+    /**
+     * Internal request helper
+     * Adds auth token and handles response parsing
+     */
+    async function _request(endpoint, options = {}) {
+        const token = localStorage.getItem('adminToken');
+        const headers = options.headers || {};
 
-        try {
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-                ...options,
-                headers,
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || 'Request failed');
-            }
-
-            return data;
-        } catch (error) {
-            console.error(`API Error (${endpoint}):`, error.message);
-            throw error;
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
         }
-    },
 
-    // ==================== CATEGORIES ====================
-    async getCategories() {
-        try {
-            const result = await this._request('/categories');
-            return result.data.categories;
-        } catch (error) {
-            console.error('Error fetching categories:', error);
-            return [];
+        // Only set Content-Type for non-FormData requests
+        if (!(options.body instanceof FormData)) {
+            headers['Content-Type'] = 'application/json';
         }
-    },
 
-    async getCategoryById(id) {
-        try {
-            const result = await this._request(`/categories/${id}`);
-            return result.data.category;
-        } catch (error) {
-            console.error('Error fetching category:', error);
-            return null;
-        }
-    },
-
-    async createCategory(categoryData) {
-        const result = await this._request('/categories', {
-            method: 'POST',
-            body: JSON.stringify(categoryData),
-        });
-        return result.data.category;
-    },
-
-    async updateCategory(id, categoryData) {
-        const result = await this._request(`/categories/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify(categoryData),
-        });
-        return result.data.category;
-    },
-
-    async deleteCategory(id) {
-        await this._request(`/categories/${id}`, {
-            method: 'DELETE',
-        });
-        return true;
-    },
-
-    // ==================== PRODUCTS ====================
-    async getProducts(params = {}) {
-        try {
-            const queryString = new URLSearchParams(params).toString();
-            const endpoint = queryString ? `/products?${queryString}` : '/products';
-            const result = await this._request(endpoint);
-            return result.data.products;
-        } catch (error) {
-            console.error('Error fetching products:', error);
-            return [];
-        }
-    },
-
-    async getProductById(id) {
-        try {
-            const result = await this._request(`/products/id/${id}`);
-            return result.data.product;
-        } catch (error) {
-            console.error('Error fetching product:', error);
-            return null;
-        }
-    },
-
-    async createProduct(productData) {
-        // Map frontend field names to backend schema
-        const mappedData = {
-            ...productData,
-            images: productData.subImages || productData.images || [],
-        };
-        delete mappedData.subImages;
-
-        const result = await this._request('/products', {
-            method: 'POST',
-            body: JSON.stringify(mappedData),
-        });
-        return result.data.product;
-    },
-
-    async updateProduct(id, productData) {
-        // Map frontend field names to backend schema
-        const mappedData = {
-            ...productData,
-            images: productData.subImages || productData.images || [],
-        };
-        delete mappedData.subImages;
-
-        const result = await this._request(`/products/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify(mappedData),
-        });
-        return result.data.product;
-    },
-
-    async deleteProduct(id) {
-        await this._request(`/products/${id}`, {
-            method: 'DELETE',
-        });
-        return true;
-    },
-
-    async toggleProductFlag(id, field, value) {
-        const result = await this._request(`/products/${id}/toggle`, {
-            method: 'PATCH',
-            body: JSON.stringify({ field, value }),
-        });
-        return result.data.product;
-    },
-
-    // ==================== ORDERS ====================
-    async getOrders(params = {}) {
-        try {
-            const queryString = new URLSearchParams(params).toString();
-            const endpoint = queryString ? `/orders?${queryString}` : '/orders';
-            const result = await this._request(endpoint);
-            return result.data.orders;
-        } catch (error) {
-            console.error('Error fetching orders:', error);
-            return [];
-        }
-    },
-
-    async getOrderById(id) {
-        try {
-            const result = await this._request(`/orders/${id}`);
-            return result.data.order;
-        } catch (error) {
-            console.error('Error fetching order:', error);
-            return null;
-        }
-    },
-
-    async updateOrderStatus(id, status) {
-        const result = await this._request(`/orders/${id}/status`, {
-            method: 'PATCH',
-            body: JSON.stringify({ orderStatus: status }),
-        });
-        return result.data.order;
-    },
-
-    async getOrderStats() {
-        try {
-            const result = await this._request('/orders/stats');
-            return result.data;
-        } catch (error) {
-            console.error('Error fetching order stats:', error);
-            return { totalOrders: 0, totalRevenue: 0, byStatus: {} };
-        }
-    },
-
-    // ==================== HOMEPAGE CONTENT ====================
-    async getHomepageContent() {
-        try {
-            const result = await this._request('/homepage');
-            return result.data;
-        } catch (error) {
-            console.error('Error fetching homepage content:', error);
-            return { sliderImages: [], trendingProducts: [], popularProducts: [] };
-        }
-    },
-
-    async updateHomepageContent(contentData) {
-        const result = await this._request('/homepage', {
-            method: 'PUT',
-            body: JSON.stringify(contentData),
-        });
-        return result.data.content;
-    },
-
-    async addSliderImage(imageData) {
-        const result = await this._request('/homepage/slider', {
-            method: 'POST',
-            body: JSON.stringify(imageData),
-        });
-        return result.data.sliderImages;
-    },
-
-    async updateSliderImage(imageId, imageData) {
-        const result = await this._request(`/homepage/slider/${imageId}`, {
-            method: 'PUT',
-            body: JSON.stringify(imageData),
-        });
-        return result.data.sliderImages;
-    },
-
-    async deleteSliderImage(imageId) {
-        const result = await this._request(`/homepage/slider/${imageId}`, {
-            method: 'DELETE',
-        });
-        return result.data.sliderImages;
-    },
-
-    async reorderSliderImages(orderedIds) {
-        const result = await this._request('/homepage/slider/reorder', {
-            method: 'PUT',
-            body: JSON.stringify({ orderedIds }),
-        });
-        return result.data.sliderImages;
-    },
-
-    // ==================== UPLOAD ====================
-    async uploadImage(file) {
-        const formData = new FormData();
-        formData.append('image', file);
-
-        const token = this._getToken();
-        const response = await fetch(`${API_BASE_URL}/upload`, {
-            method: 'POST',
-            headers: {
-                ...(token && { 'Authorization': `Bearer ${token}` }),
-            },
-            body: formData,
+        const response = await fetch(`${API_BASE}${endpoint}`, {
+            ...options,
+            headers
         });
 
         const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.message || 'Upload failed');
-        }
-        return data.data;
-    },
 
-    async uploadImageFromUrl(imageUrl) {
-        const result = await this._request('/upload/url', {
+        if (!response.ok) {
+            throw new Error(data.message || `Request failed (${response.status})`);
+        }
+
+        return data;
+    }
+
+    // ==========================================
+    // CATEGORIES
+    // ==========================================
+
+    async function getCategories() {
+        // Backend returns: { status, results, categories }
+        const result = await _request('/categories');
+        return result.categories || [];
+    }
+
+    async function getCategoryById(id) {
+        // Backend returns: { status, category }
+        const result = await _request(`/categories/${id}`);
+        return result.category || null;
+    }
+
+    async function createCategory(categoryData) {
+        const result = await _request('/categories', {
             method: 'POST',
-            body: JSON.stringify({ imageUrl }),
+            body: JSON.stringify(categoryData)
+        });
+        return result.category;
+    }
+
+    async function updateCategory(id, categoryData) {
+        const result = await _request(`/categories/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(categoryData)
+        });
+        return result.category;
+    }
+
+    async function deleteCategory(id) {
+        return await _request(`/categories/${id}`, {
+            method: 'DELETE'
+        });
+    }
+
+    // ==========================================
+    // PRODUCTS
+    // ==========================================
+
+    async function getProducts() {
+        // Backend returns: { status, results, products }
+        const result = await _request('/products?limit=1000');
+        return result.products || [];
+    }
+
+    async function getProductById(id) {
+        // Backend route is GET /api/products/:idOrSlug
+        const result = await _request(`/products/${id}`);
+        return result.product || null;
+    }
+
+    async function createProduct(productData) {
+        // Map frontend camelCase field names → backend snake_case
+        const payload = _mapProductToBackend(productData);
+
+        const result = await _request('/products', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        return result.product;
+    }
+
+    async function updateProduct(id, productData) {
+        // Map frontend camelCase field names → backend snake_case
+        const payload = _mapProductToBackend(productData);
+
+        const result = await _request(`/products/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+        });
+        return result.product;
+    }
+
+    async function deleteProduct(id) {
+        return await _request(`/products/${id}`, {
+            method: 'DELETE'
+        });
+    }
+
+    /**
+     * Maps frontend product fields to backend field names
+     * Frontend sends: category, primaryImage, isTrending, isMenCollection, etc.
+     * Backend expects: category_id, primary_image, is_trending, is_men_collection, etc.
+     */
+    function _mapProductToBackend(data) {
+        const payload = {};
+
+        if (data.name !== undefined) payload.name = data.name;
+        if (data.description !== undefined) payload.description = data.description;
+        if (data.price !== undefined) payload.price = data.price;
+        if (data.discount_price !== undefined) payload.discount_price = data.discount_price;
+        if (data.stock !== undefined) payload.stock = data.stock;
+        if (data.sizes !== undefined) payload.sizes = data.sizes;
+        if (data.colors !== undefined) payload.colors = data.colors;
+        if (data.images !== undefined) payload.images = data.images;
+        if (data.seo_title !== undefined) payload.seo_title = data.seo_title;
+        if (data.seo_description !== undefined) payload.seo_description = data.seo_description;
+
+        // Map camelCase → snake_case
+        if (data.category !== undefined) payload.category_id = data.category;
+        if (data.primaryImage !== undefined) payload.primary_image = data.primaryImage;
+        if (data.isTrending !== undefined) payload.is_trending = data.isTrending;
+        if (data.isPopular !== undefined) payload.is_popular = data.isPopular;
+        if (data.isFeatured !== undefined) payload.is_featured = data.isFeatured;
+        if (data.isMenCollection !== undefined) payload.is_men_collection = data.isMenCollection;
+        if (data.isWomenCollection !== undefined) payload.is_women_collection = data.isWomenCollection;
+
+        return payload;
+    }
+
+    // ==========================================
+    // ORDERS
+    // ==========================================
+
+    async function getOrders() {
+        // Backend returns: { status, results, orders }
+        // Note: getAllOrders returns orders with item_count, NOT full items array
+        const result = await _request('/orders');
+        const orders = result.orders || [];
+
+        // Normalize field names for admin JS compatibility
+        return orders.map(order => ({
+            ...order,
+            id: order.id,
+            orderNumber: order.order_number,
+            orderStatus: order.order_status,
+            totalAmount: parseFloat(order.total_amount),
+            customerInfo: {
+                name: order.customer_name,
+                email: order.customer_email,
+                phone: order.customer_phone
+            },
+            // items array is NOT included in list endpoint, only item_count
+            items: order.items || Array(order.item_count || 0).fill({ name: '-', price: 0, quantity: 1 }),
+            createdAt: order.created_at
+        }));
+    }
+
+    async function getOrderById(id) {
+        // Backend returns: { status, order } with items and shippingAddress
+        const result = await _request(`/orders/${id}`);
+        const order = result.order;
+        if (!order) return null;
+
+        // Normalize field names
+        return {
+            ...order,
+            id: order.id,
+            orderNumber: order.order_number,
+            orderStatus: order.order_status,
+            totalAmount: parseFloat(order.total_amount),
+            customerInfo: {
+                name: order.customer_name,
+                email: order.customer_email,
+                phone: order.customer_phone
+            },
+            items: (order.items || []).map(item => ({
+                ...item,
+                name: item.product_name || item.name,
+                price: parseFloat(item.price),
+                quantity: item.quantity,
+                size: item.size,
+                image: item.image
+            })),
+            shippingAddress: order.shippingAddress || order.shipping_address || {},
+            createdAt: order.created_at
+        };
+    }
+
+    async function updateOrderStatus(orderId, newStatus) {
+        // Backend route is PATCH /api/orders/:id  (NOT /orders/:id/status)
+        // Backend expects: { order_status: '...' }
+        const result = await _request(`/orders/${orderId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ order_status: newStatus })
+        });
+        return result.order;
+    }
+
+    // ==========================================
+    // UPLOAD
+    // ==========================================
+
+    async function uploadImage(file) {
+        const formData = new FormData();
+        formData.append('image', file);
+
+        // Backend returns: { status, data: { url, filename, size } }
+        const result = await _request('/upload', {
+            method: 'POST',
+            body: formData
         });
         return result.data;
-    },
+    }
 
-    // ==================== STATISTICS ====================
-    async getStatistics() {
+    // ==========================================
+    // STATISTICS (computed from existing endpoints)
+    // ==========================================
+
+    async function getStatistics() {
         try {
             const [products, orders, categories] = await Promise.all([
-                this.getProducts(),
-                this.getOrders(),
-                this.getCategories(),
+                getProducts().catch(() => []),
+                _request('/orders').catch(() => ({ orders: [] })),
+                _request('/categories').catch(() => ({ categories: [] }))
             ]);
 
-            const pendingOrders = orders.filter(o => o.orderStatus === 'Pending').length;
-            const shippedOrders = orders.filter(o => o.orderStatus === 'Shipped').length;
-            const deliveredOrders = orders.filter(o => o.orderStatus === 'Delivered').length;
+            const ordersList = orders.orders || orders || [];
+            const categoriesList = categories.categories || categories || [];
+            const pendingOrders = Array.isArray(ordersList)
+                ? ordersList.filter(o => o.order_status === 'Pending').length
+                : 0;
 
             return {
-                totalProducts: products.length,
-                totalOrders: orders.length,
-                totalCategories: categories.length,
-                pendingOrders,
-                shippedOrders,
-                deliveredOrders,
+                totalProducts: Array.isArray(products) ? products.length : 0,
+                totalOrders: Array.isArray(ordersList) ? ordersList.length : 0,
+                totalCategories: Array.isArray(categoriesList) ? categoriesList.length : 0,
+                pendingOrders: pendingOrders
             };
         } catch (error) {
-            console.error('Error fetching statistics:', error);
+            console.error('Error computing statistics:', error);
             return {
                 totalProducts: 0,
                 totalOrders: 0,
                 totalCategories: 0,
-                pendingOrders: 0,
-                shippedOrders: 0,
-                deliveredOrders: 0,
+                pendingOrders: 0
             };
         }
-    },
+    }
 
-    // ==================== CUSTOMERS ====================
-    async getCustomers(params = {}) {
-        try {
-            const queryString = new URLSearchParams(params).toString();
-            const endpoint = queryString ? `/admin/customers?${queryString}` : '/admin/customers';
-            const result = await this._request(endpoint);
-            return result.data.customers;
-        } catch (error) {
-            console.error('Error fetching customers:', error);
-            return [];
-        }
-    },
-};
+    // ==========================================
+    // PUBLIC API
+    // ==========================================
+
+    return {
+        // Categories
+        getCategories,
+        getCategoryById,
+        createCategory,
+        updateCategory,
+        deleteCategory,
+
+        // Products
+        getProducts,
+        getProductById,
+        createProduct,
+        updateProduct,
+        deleteProduct,
+
+        // Orders
+        getOrders,
+        getOrderById,
+        updateOrderStatus,
+
+        // Upload
+        uploadImage,
+
+        // Statistics
+        getStatistics
+    };
+
+})();

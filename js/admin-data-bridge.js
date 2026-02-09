@@ -60,8 +60,8 @@
         }
 
         const result = await fetchAPI('/products?limit=1000');
-        if (result && result.data) {
-            productsCache = result.data.products;
+        if (result && result.products) {
+            productsCache = result.products;
             cacheTimestamp = Date.now();
             return productsCache;
         }
@@ -78,8 +78,8 @@
         }
 
         const result = await fetchAPI('/categories');
-        if (result && result.data) {
-            categoriesCache = result.data.categories;
+        if (result && result.categories) {
+            categoriesCache = result.categories;
             cacheTimestamp = Date.now();
             return categoriesCache;
         }
@@ -95,17 +95,16 @@
             return homepageCache;
         }
 
-        const result = await fetchAPI('/homepage');
-        if (result && result.data) {
-            homepageCache = result.data;
-            cacheTimestamp = Date.now();
-            return homepageCache;
-        }
-        return {
+        // No dedicated homepage endpoint exists.
+        // Build homepage data from products flagged as trending/popular.
+        const products = await getAdminProducts();
+        homepageCache = {
             sliderImages: [],
-            trendingProducts: [],
-            popularProducts: []
+            trendingProducts: products.filter(p => p.is_trending),
+            popularProducts: products.filter(p => p.is_popular)
         };
+        cacheTimestamp = Date.now();
+        return homepageCache;
     }
 
     /**
@@ -113,7 +112,7 @@
      */
     async function getAdminCategoryById(categoryId) {
         const categories = await getAdminCategories();
-        return categories.find(cat => cat._id === categoryId) || null;
+        return categories.find(cat => cat.id == categoryId) || null;
     }
 
     /**
@@ -121,7 +120,7 @@
      */
     async function getAdminProductById(productId) {
         const products = await getAdminProducts();
-        return products.find(prod => prod._id === productId) || null;
+        return products.find(prod => prod.id == productId) || null;
     }
 
     /**
@@ -129,15 +128,20 @@
      */
     async function getAdminProductsByCategory(categoryId) {
         const products = await getAdminProducts();
-        return products.filter(prod => prod.category?._id === categoryId || prod.category === categoryId);
+        return products.filter(prod => prod.category_id == categoryId);
     }
 
     /**
      * Get products by category type (Men/Women/General)
      */
     async function getAdminProductsByCategoryType(type) {
-        const products = await getAdminProducts();
-        return products.filter(prod => prod.category?.type === type);
+        // For category type filtering, we need to fetch categories too
+        const [products, categories] = await Promise.all([
+            getAdminProducts(),
+            getAdminCategories()
+        ]);
+        const categoryIds = categories.filter(c => c.type === type).map(c => c.id);
+        return products.filter(prod => categoryIds.includes(prod.category_id));
     }
 
     /**
@@ -150,7 +154,7 @@
         }
         // Fallback: get products marked as trending
         const products = await getAdminProducts();
-        return products.filter(prod => prod.isTrending === true);
+        return products.filter(prod => prod.is_trending == 1 || prod.is_trending === true);
     }
 
     /**
@@ -163,7 +167,7 @@
         }
         // Fallback: get products marked as popular
         const products = await getAdminProducts();
-        return products.filter(prod => prod.isPopular === true);
+        return products.filter(prod => prod.is_popular == 1 || prod.is_popular === true);
     }
 
     /**
@@ -171,7 +175,7 @@
      */
     async function getAdminMenProducts() {
         const products = await getAdminProducts();
-        return products.filter(prod => prod.isMenCollection === true);
+        return products.filter(prod => prod.is_men_collection == 1 || prod.is_men_collection === true);
     }
 
     /**
@@ -179,7 +183,7 @@
      */
     async function getAdminWomenProducts() {
         const products = await getAdminProducts();
-        return products.filter(prod => prod.isWomenCollection === true);
+        return products.filter(prod => prod.is_women_collection == 1 || prod.is_women_collection === true);
     }
 
     /**
@@ -194,30 +198,29 @@
      * Transform product for website display
      */
     function transformProductForWebsite(product) {
-        const category = product.category;
         return {
-            id: product._id,
+            id: product.id,
             name: product.name,
             slug: product.slug,
             price: product.price.toString(),
-            priceFormatted: `₹${product.price.toLocaleString('en-IN')}`,
-            discountPrice: product.discountPrice,
-            image: product.primaryImage,
+            priceFormatted: `₹${Number(product.price).toLocaleString('en-IN')}`,
+            discountPrice: product.discount_price,
+            image: product.primary_image,
             subImages: product.images || [],
-            category: category?.name?.toLowerCase() || 'general',
-            categoryId: category?._id || product.category,
-            categoryName: category?.name || 'General',
-            categoryType: category?.type || 'General',
-            subCategory: product.subCategory || '',
+            category: 'general',
+            categoryId: product.category_id,
+            categoryName: 'General',
+            categoryType: 'General',
+            subCategory: product.sub_category || '',
             sizes: product.sizes || [],
             colors: product.colors || [],
             stock: product.stock || 0,
             description: product.description || '',
-            isPopular: product.isPopular || false,
-            isTrending: product.isTrending || false,
-            isFeatured: product.isFeatured || false,
-            isMenCollection: product.isMenCollection || false,
-            isWomenCollection: product.isWomenCollection || false
+            isPopular: product.is_popular == 1,
+            isTrending: product.is_trending == 1,
+            isFeatured: product.is_featured == 1,
+            isMenCollection: product.is_men_collection == 1,
+            isWomenCollection: product.is_women_collection == 1
         };
     }
 

@@ -1,5 +1,5 @@
 // Hero Slider Functionality - Now syncs with Admin Panel
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
     const heroSlider = document.getElementById('heroSlider');
 
     if (heroSlider) {
@@ -10,10 +10,10 @@ document.addEventListener('DOMContentLoaded', function () {
         /**
          * Initialize slider with admin data or fallback to static HTML
          */
-        function initializeSlider() {
+        async function initializeSlider() {
             // Try to load slider images from admin panel
             if (typeof AdminDataBridge !== 'undefined') {
-                const adminSlides = AdminDataBridge.getSliderImages();
+                const adminSlides = await AdminDataBridge.getSliderImages();
 
                 if (adminSlides && adminSlides.length > 0) {
                     // Clear existing slides
@@ -97,8 +97,8 @@ document.addEventListener('DOMContentLoaded', function () {
             clearInterval(autoSlideInterval);
         }
 
-        // Initialize the slider
-        const initialized = initializeSlider();
+        // Initialize the slider (async)
+        const initialized = await initializeSlider();
 
         if (!initialized) {
             return; // Exit if no slides

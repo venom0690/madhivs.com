@@ -12,32 +12,32 @@ function addToCart(name, price, image, category = '', size = null, productId = n
   if (!size && productId) {
     size = getSelectedSize(productId);
   }
-  
+
   if (!size) {
     showNotification("Please select a size");
     return;
   }
-  
+
   let cart = JSON.parse(localStorage.getItem("cart")) || [];
   const itemId = `${name}-${size}`;
   const existingItem = cart.find(item => item.id === itemId);
-  
+
   if (existingItem) {
     existingItem.quantity += 1;
     showNotification(`${name} (Size: ${size}) quantity updated!`);
   } else {
-    cart.push({ 
+    cart.push({
       id: itemId,
-      name, 
-      price, 
-      image, 
+      name,
+      price,
+      image,
       category,
       size,
-      quantity: 1 
+      quantity: 1
     });
     showNotification(`${name} (Size: ${size}) added to cart!`);
   }
-  
+
   localStorage.setItem("cart", JSON.stringify(cart));
   updateCartCount();
 }
@@ -53,7 +53,7 @@ function removeFromCart(itemId) {
 function updateQuantity(itemId, change) {
   let cart = JSON.parse(localStorage.getItem("cart")) || [];
   const item = cart.find(item => item.id === itemId);
-  
+
   if (item) {
     item.quantity += change;
     if (item.quantity <= 0) {
@@ -69,9 +69,9 @@ function updateQuantity(itemId, change) {
 function loadCart() {
   let cart = JSON.parse(localStorage.getItem("cart")) || [];
   let container = document.getElementById("cart-items");
-  
+
   if (!container) return;
-  
+
   if (cart.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
@@ -86,10 +86,10 @@ function loadCart() {
     document.getElementById("cart-summary").style.display = "none";
     return;
   }
-  
+
   let total = 0;
   let html = "";
-  
+
   cart.forEach((item, index) => {
     const itemTotal = item.price * item.quantity;
     total += itemTotal;
@@ -116,13 +116,13 @@ function loadCart() {
       </div>
     `;
   });
-  
+
   container.innerHTML = html;
-  
+
   const subtotal = total;
   const shipping = 99;
   const finalTotal = subtotal + shipping;
-  
+
   document.getElementById("subtotal").textContent = `₹${subtotal.toLocaleString()}`;
   document.getElementById("total").textContent = `₹${finalTotal.toLocaleString()}`;
   document.getElementById("cart-summary").style.display = "block";
@@ -141,7 +141,7 @@ function updateCartCount() {
 function toggleWishlist(name, price, image, category = '') {
   let wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
   const existingIndex = wishlist.findIndex(item => item.name === name);
-  
+
   if (existingIndex > -1) {
     wishlist.splice(existingIndex, 1);
     showNotification(`${name} removed from wishlist`);
@@ -149,11 +149,11 @@ function toggleWishlist(name, price, image, category = '') {
     wishlist.push({ name, price, image, category });
     showNotification(`${name} added to wishlist`);
   }
-  
+
   localStorage.setItem("wishlist", JSON.stringify(wishlist));
   updateWishlistCount();
   updateWishlistButtons();
-  
+
   // Reload wishlist page if on it
   if (document.getElementById("wishlist-items")) {
     loadWishlist();
@@ -185,9 +185,9 @@ function updateWishlistButtons() {
 function loadWishlist() {
   let wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
   let container = document.getElementById("wishlist-items");
-  
+
   if (!container) return;
-  
+
   if (wishlist.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
@@ -201,9 +201,9 @@ function loadWishlist() {
     `;
     return;
   }
-  
+
   let html = "";
-  
+
   wishlist.forEach(item => {
     html += `
       <div class="wishlist-item">
@@ -222,7 +222,7 @@ function loadWishlist() {
       </div>
     `;
   });
-  
+
   container.innerHTML = html;
 }
 
@@ -238,17 +238,17 @@ function updateWishlistCount() {
 function loadCheckoutSummary() {
   let cart = JSON.parse(localStorage.getItem("cart")) || [];
   let container = document.getElementById("order-items");
-  
+
   if (!container) return;
-  
+
   if (cart.length === 0) {
     window.location.href = "cart.html";
     return;
   }
-  
+
   let total = 0;
   let html = "";
-  
+
   cart.forEach(item => {
     const itemTotal = item.price * item.quantity;
     total += itemTotal;
@@ -260,53 +260,110 @@ function loadCheckoutSummary() {
       </div>
     `;
   });
-  
+
   const shipping = 99;
   const finalTotal = total + shipping;
-  
+
   html += `
     <div class="order-item">
       <span>Shipping</span>
       <span>₹${shipping}</span>
     </div>
   `;
-  
+
   container.innerHTML = html;
   document.getElementById("order-total").textContent = `₹${finalTotal.toLocaleString()}`;
 }
 
 function handleCheckout(event) {
   event.preventDefault();
-  
+
   const cart = JSON.parse(localStorage.getItem("cart")) || [];
   if (cart.length === 0) {
     alert("Your cart is empty!");
     return;
   }
-  
+
   // Get form data
-  const formData = {
-    firstName: document.getElementById("firstName").value,
-    lastName: document.getElementById("lastName").value,
-    email: document.getElementById("email").value,
-    phone: document.getElementById("phone").value,
-    address: document.getElementById("address").value,
-    city: document.getElementById("city").value,
-    state: document.getElementById("state").value,
-    zipCode: document.getElementById("zipCode").value,
-    country: document.getElementById("country").value
+  const firstName = document.getElementById("firstName").value;
+  const lastName = document.getElementById("lastName").value;
+  const email = document.getElementById("email").value;
+  const phone = document.getElementById("phone").value;
+  const address = document.getElementById("address").value;
+  const city = document.getElementById("city").value;
+  const state = document.getElementById("state").value;
+  const zipCode = document.getElementById("zipCode").value;
+  const country = document.getElementById("country")?.value || "India";
+
+  // Calculate total
+  const shipping = 99;
+  const itemsTotal = cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+  const totalAmount = itemsTotal + shipping;
+
+  // Build order payload matching backend orderValidator schema
+  const orderPayload = {
+    customerInfo: {
+      name: `${firstName} ${lastName}`.trim(),
+      email: email,
+      phone: phone
+    },
+    items: cart.map(item => ({
+      name: item.name || item.title || 'Product',
+      price: Number(item.price),
+      quantity: item.quantity || 1,
+      size: item.size || '',
+      color: item.color || '',
+      image: item.image || ''
+    })),
+    shippingAddress: {
+      street: address,
+      city: city,
+      state: state,
+      pincode: zipCode, // Backend expects 'pincode', form has 'zipCode'
+      country: country
+    },
+    totalAmount: totalAmount,
+    paymentMethod: 'cod'
   };
-  
-  // In a real application, you would send this data to a server
-  // For now, we'll just show a success message and clear the cart
-  alert("Order placed successfully! Thank you for your purchase.");
-  
-  // Clear cart
-  localStorage.removeItem("cart");
-  updateCartCount();
-  
-  // Redirect to home
-  window.location.href = "index.html";
+
+  // Disable submit button to prevent double-clicks
+  const submitBtn = event.target.querySelector('button[type="submit"]');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Placing Order...';
+  }
+
+  // POST order to backend API
+  const apiBase = window.location.origin;
+  fetch(`${apiBase}/api/orders`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(orderPayload)
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === 'success') {
+        // Clear cart
+        localStorage.removeItem("cart");
+        updateCartCount();
+        // Redirect to success page
+        window.location.href = "success.html";
+      } else {
+        alert("Order failed: " + (data.message || "Please try again."));
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Place Order';
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Checkout error:', error);
+      alert("Something went wrong. Please try again.");
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Place Order';
+      }
+    });
 }
 
 // Filter Functions
@@ -326,12 +383,12 @@ function applyFilters() {
   const categoryFilter = document.querySelector('select[onchange*="filterCategory"]')?.value || 'all';
   const sizeFilter = document.querySelector('select[onchange*="filterSize"]')?.value || 'all';
   const priceFilter = document.querySelector('select[onchange*="filterPrice"]')?.value || 'all';
-  
+
   document.querySelectorAll(".card").forEach(card => {
     // Category filter
     const cardCategory = card.getAttribute('data-category');
     let showCategory = categoryFilter === "all" || cardCategory === categoryFilter || card.classList.contains(categoryFilter);
-    
+
     // Size filter
     let showSize = true;
     if (sizeFilter !== 'all') {
@@ -339,7 +396,7 @@ function applyFilters() {
       const availableSizes = Array.from(sizeBtns).map(btn => btn.textContent.trim());
       showSize = availableSizes.includes(sizeFilter);
     }
-    
+
     // Price filter
     let showPrice = true;
     if (priceFilter !== 'all') {
@@ -354,7 +411,7 @@ function applyFilters() {
         showPrice = price > 3000;
       }
     }
-    
+
     card.style.display = (showCategory && showSize && showPrice) ? "block" : "none";
   });
 }
@@ -393,9 +450,9 @@ function showNotification(message) {
     animation: slideIn 0.3s ease;
   `;
   notification.textContent = message;
-  
+
   document.body.appendChild(notification);
-  
+
   setTimeout(() => {
     notification.style.animation = "slideOut 0.3s ease";
     setTimeout(() => {
@@ -434,19 +491,19 @@ document.head.appendChild(style);
 function initMobileMenu() {
   const menuToggle = document.getElementById('mobile-menu-toggle');
   const nav = document.getElementById('main-nav');
-  
+
   if (menuToggle && nav) {
-    menuToggle.addEventListener('click', function() {
+    menuToggle.addEventListener('click', function () {
       menuToggle.classList.toggle('active');
       nav.classList.toggle('active');
     });
-    
+
     // Handle categories dropdown on mobile
     const categoriesDropdown = nav.querySelector('.categories-dropdown');
     if (categoriesDropdown) {
       const categoriesLink = categoriesDropdown.querySelector('> a');
       if (categoriesLink) {
-        categoriesLink.addEventListener('click', function(e) {
+        categoriesLink.addEventListener('click', function (e) {
           // Only prevent default on mobile
           if (window.innerWidth <= 768) {
             e.preventDefault();
@@ -455,21 +512,21 @@ function initMobileMenu() {
         });
       }
     }
-    
+
     // Close menu when clicking on a link (except categories dropdown)
     const navLinks = nav.querySelectorAll('a:not(.categories-dropdown > a)');
     navLinks.forEach(link => {
-      link.addEventListener('click', function() {
+      link.addEventListener('click', function () {
         menuToggle.classList.remove('active');
         nav.classList.remove('active');
       });
     });
-    
+
     // Close menu when clicking outside
-    document.addEventListener('click', function(event) {
+    document.addEventListener('click', function (event) {
       const isClickInsideNav = nav.contains(event.target);
       const isClickOnToggle = menuToggle.contains(event.target);
-      
+
       if (!isClickInsideNav && !isClickOnToggle && nav.classList.contains('active')) {
         menuToggle.classList.remove('active');
         nav.classList.remove('active');
@@ -480,7 +537,7 @@ function initMobileMenu() {
 
 // Initialize on page load
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', function () {
     updateCartCount();
     updateWishlistCount();
     updateWishlistButtons();

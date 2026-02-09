@@ -1,5 +1,5 @@
 // Product Detail Page Functionality
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
     // Get URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const productId = urlParams.get('id'); // Get ID from URL if available
@@ -7,20 +7,29 @@ document.addEventListener('DOMContentLoaded', function () {
     const productPrice = urlParams.get('price') || '0';
     const productImage = urlParams.get('image') || 'https://via.placeholder.com/600';
 
+    // Helper: only append query params to external URLs
+    function safeImageUrl(src, params) {
+        if (!src) return src;
+        if (src.startsWith('http://') || src.startsWith('https://')) {
+            return src + (params || '');
+        }
+        return src;
+    }
+
     // Try to find product in Admin Data to get dynamic attributes
     let productData = null;
-    if (typeof AdminDataBridge !== 'undefined' && AdminDataBridge.hasData()) {
+    if (typeof AdminDataBridge !== 'undefined' && await AdminDataBridge.hasData()) {
         if (productId) {
             // Prefer finding by ID
-            const rawProduct = AdminDataBridge.getProductById(productId);
+            const rawProduct = await AdminDataBridge.getProductById(productId);
             if (rawProduct) {
                 productData = AdminDataBridge.transformProduct(rawProduct);
             }
         }
-        
+
         // Fallback to name search if ID didn't work or wasn't provided
         if (!productData) {
-            const products = AdminDataBridge.getWebsiteProducts();
+            const products = await AdminDataBridge.getWebsiteProducts();
             productData = products.find(p => p.name === productName);
         }
     }
@@ -28,13 +37,13 @@ document.addEventListener('DOMContentLoaded', function () {
     // Set product information
     document.getElementById('productName').textContent = productData ? productData.name : productName;
     document.getElementById('productPrice').textContent = productData ? productData.priceFormatted : `₹${parseInt(productPrice).toLocaleString('en-IN')}`;
-    
+
     // Update Description
     if (productData && productData.description) {
         const descEl = document.getElementById('productDescription');
         if (descEl) descEl.textContent = productData.description;
     }
-    
+
     // Set Category / Sub-category info
     const categoryElement = document.getElementById('productCategory');
     if (categoryElement) {
@@ -42,7 +51,7 @@ document.addEventListener('DOMContentLoaded', function () {
             let catText = productData.categoryName || productData.category;
             // Capitalize first letter if needed
             if (catText) catText = catText.charAt(0).toUpperCase() + catText.slice(1);
-            
+
             if (productData.subCategory) {
                 catText += ` / ${productData.subCategory}`;
             }
@@ -56,14 +65,14 @@ document.addEventListener('DOMContentLoaded', function () {
     // Create 4 different view variants of the image
     const thumbnails = document.querySelectorAll('.product-detail-thumbnail');
     const mainImage = document.getElementById('productMainImage');
-    
+
     // Use image from productData if available, otherwise URL param
     const displayImage = productData ? productData.image : productImage;
 
     // Set main image
     // Check if image is base64 or relative url vs external url
     const isDataUrl = displayImage.startsWith('data:') || displayImage.startsWith('blob:');
-    mainImage.src = isDataUrl ? displayImage : displayImage + '?w=800&q=80';
+    mainImage.src = isDataUrl ? displayImage : safeImageUrl(displayImage, '?w=800&q=80');
 
     // Set thumbnails
     if (productData && productData.subImages && productData.subImages.length > 0) {
@@ -72,16 +81,16 @@ document.addEventListener('DOMContentLoaded', function () {
             // Index 0: Main Image
             // Index 1+: Sub Images
             let thumbSrc = '';
-            
+
             if (index === 0) {
                 thumbSrc = displayImage;
             } else if (index - 1 < productData.subImages.length) {
                 thumbSrc = productData.subImages[index - 1];
             }
-            
+
             if (thumbSrc) {
                 const isThumbDataUrl = thumbSrc.startsWith('data:') || thumbSrc.startsWith('blob:');
-                thumbnail.src = isThumbDataUrl ? thumbSrc : thumbSrc + '?w=200&q=80';
+                thumbnail.src = isThumbDataUrl ? thumbSrc : safeImageUrl(thumbSrc, '?w=200&q=80');
                 thumbnail.style.display = 'block';
             } else {
                 thumbnail.style.display = 'none';
@@ -89,13 +98,11 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     } else {
         // Fallback: Generate variants
-        const suffix = isDataUrl ? '' : '?w=200&q=80';
-        
-        thumbnails[0].src = displayImage + suffix;
-        thumbnails[1].src = displayImage + (isDataUrl ? '' : '?w=200&q=80&sat=-20');
-        thumbnails[2].src = displayImage + (isDataUrl ? '' : '?w=200&q=80&brightness=10');
-        thumbnails[3].src = displayImage + (isDataUrl ? '' : '?w=200&q=80&contrast=10');
-        
+        thumbnails[0].src = isDataUrl ? displayImage : safeImageUrl(displayImage, '?w=200&q=80');
+        thumbnails[1].src = isDataUrl ? displayImage : safeImageUrl(displayImage, '?w=200&q=80&sat=-20');
+        thumbnails[2].src = isDataUrl ? displayImage : safeImageUrl(displayImage, '?w=200&q=80&brightness=10');
+        thumbnails[3].src = isDataUrl ? displayImage : safeImageUrl(displayImage, '?w=200&q=80&contrast=10');
+
         thumbnails.forEach(t => t.style.display = 'block');
     }
 
@@ -136,10 +143,10 @@ document.addEventListener('DOMContentLoaded', function () {
             btn.className = `size-btn ${index === 0 ? 'active' : ''}`;
             btn.textContent = size;
             btn.dataset.size = size;
-            btn.onclick = function() {
-                 sizeOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
-                 this.classList.add('active');
-                 selectedSize = this.dataset.size;
+            btn.onclick = function () {
+                sizeOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                selectedSize = this.dataset.size;
             };
             sizeOptionsContainer.appendChild(btn);
             if (index === 0) selectedSize = size;
@@ -192,7 +199,7 @@ document.addEventListener('DOMContentLoaded', function () {
         productData.colors.forEach((color, index) => {
             const btn = document.createElement('button');
             const paletteColor = colorPalette.find(c => c.name === color);
-            
+
             if (paletteColor) {
                 // Visual Swatch
                 btn.className = `color-btn ${index === 0 ? 'active' : ''}`;
@@ -207,35 +214,35 @@ document.addEventListener('DOMContentLoaded', function () {
                     position: relative;
                 `;
                 btn.title = color;
-                
+
                 // Checkmark for active state
                 if (index === 0) {
                     btn.innerHTML = '<span style="color: ' + (['White', 'Yellow', 'Beige'].includes(color) ? '#000' : '#fff') + '; font-size: 12px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">✓</span>';
                 }
 
-                btn.onclick = function() {
-                     // Reset all
-                     Array.from(colorOptionsContainer.children).forEach(b => {
-                         b.style.borderColor = '#ddd';
-                         b.innerHTML = '';
-                     });
-                     
-                     // Set active
-                     this.style.borderColor = '#000';
-                     this.innerHTML = '<span style="color: ' + (['White', 'Yellow', 'Beige'].includes(color) ? '#000' : '#fff') + '; font-size: 12px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">✓</span>';
-                     selectedColor = this.dataset.color;
+                btn.onclick = function () {
+                    // Reset all
+                    Array.from(colorOptionsContainer.children).forEach(b => {
+                        b.style.borderColor = '#ddd';
+                        b.innerHTML = '';
+                    });
+
+                    // Set active
+                    this.style.borderColor = '#000';
+                    this.innerHTML = '<span style="color: ' + (['White', 'Yellow', 'Beige'].includes(color) ? '#000' : '#fff') + '; font-size: 12px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">✓</span>';
+                    selectedColor = this.dataset.color;
                 };
             } else {
                 // Text Button Fallback
                 btn.className = `size-btn ${index === 0 ? 'active' : ''}`;
                 btn.textContent = color;
-                btn.onclick = function() {
-                     colorOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
-                     this.classList.add('active');
-                     selectedColor = this.dataset.color;
+                btn.onclick = function () {
+                    colorOptionsContainer.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    selectedColor = this.dataset.color;
                 };
             }
-            
+
             btn.dataset.color = color;
             colorOptionsContainer.appendChild(btn);
             if (index === 0) selectedColor = color;

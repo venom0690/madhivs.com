@@ -1,5 +1,6 @@
 /**
  * Products Management Logic
+ * Fixed version - uploads images to server API
  */
 
 // Auth guard
@@ -100,7 +101,7 @@ primaryImageUrlInput.addEventListener('input', updatePrimaryImagePreview);
 primaryImageFileInput.addEventListener('change', handlePrimaryImageFile);
 
 // Category/SubCategory Handlers
-productCategoryInput.addEventListener('change', function() {
+productCategoryInput.addEventListener('change', function () {
     loadSubCategories(this.value);
 });
 
@@ -114,32 +115,36 @@ if (createCategoryLink) {
 }
 
 if (createSubCategoryLink) {
-    createSubCategoryLink.addEventListener('click', (e) => {
+    createSubCategoryLink.addEventListener('click', async (e) => {
         e.preventDefault();
         const categoryId = productCategoryInput.value;
         if (!categoryId) {
             alert('Please select a category first.');
             return;
         }
-        
+
         const newSub = prompt('Enter new sub-category name:');
         if (newSub && newSub.trim()) {
-            const category = dataService.getCategoryById(categoryId);
-            if (category) {
-                // Initialize subCategories if missing
-                if (!category.subCategories) category.subCategories = [];
-                
-                // Add if not exists
-                if (!category.subCategories.includes(newSub.trim())) {
-                    category.subCategories.push(newSub.trim());
-                    dataService.updateCategory(categoryId, category);
-                    
-                    // Reload dropdown and select new value
-                    loadSubCategories(categoryId, newSub.trim());
-                    alert('Sub-category added!');
-                } else {
-                    alert('Sub-category already exists.');
+            try {
+                const category = await dataService.getCategoryById(categoryId);
+                if (category) {
+                    // Initialize subCategories if missing
+                    if (!category.subCategories) category.subCategories = [];
+
+                    // Add if not exists
+                    if (!category.subCategories.includes(newSub.trim())) {
+                        category.subCategories.push(newSub.trim());
+                        await dataService.updateCategory(categoryId, { subCategories: category.subCategories });
+
+                        // Reload dropdown and select new value
+                        loadSubCategories(categoryId, newSub.trim());
+                        alert('Sub-category added!');
+                    } else {
+                        alert('Sub-category already exists.');
+                    }
                 }
+            } catch (error) {
+                alert('Failed to add sub-category: ' + error.message);
             }
         }
     });
@@ -149,11 +154,11 @@ if (createSubCategoryLink) {
 function renderColorSwatches() {
     if (!colorSwatchesContainer) return;
     colorSwatchesContainer.innerHTML = '';
-    
+
     colorPalette.forEach(color => {
         const div = document.createElement('div');
         const isSelected = selectedColors.has(color.name);
-        
+
         div.style.cssText = `
             width: 32px; 
             height: 32px; 
@@ -168,11 +173,11 @@ function renderColorSwatches() {
             transition: all 0.2s;
         `;
         div.title = color.name;
-        
+
         if (isSelected) {
             div.innerHTML = `<span style="color: ${['White', 'Yellow', 'Beige'].includes(color.name) ? '#000' : '#fff'}; font-weight: bold; font-size: 14px;">✓</span>`;
         }
-        
+
         div.onclick = () => toggleColor(color.name);
         colorSwatchesContainer.appendChild(div);
     });
@@ -188,40 +193,61 @@ function toggleColor(colorName) {
 }
 
 // Load categories into dropdown
-function loadCategoryDropdown() {
-    const categories = dataService.getCategories();
-    const select = productCategoryInput;
+async function loadCategoryDropdown() {
+    try {
+        const categories = await dataService.getCategories();
+        const select = productCategoryInput;
 
-    select.innerHTML = '<option value="">Select category</option>';
+        select.innerHTML = '<option value="">Select category</option>';
 
-    categories.forEach(category => {
-        const option = document.createElement('option');
-        option.value = category.id;
-        option.textContent = `${category.name} (${category.type})`;
-        select.appendChild(option);
-    });
-    // Load sub-categories if category selected
-    if (productIdInput.value && productCategoryInput.value) {
-        // Wait for category to be set
-        setTimeout(() => {
-             loadSubCategories(productCategoryInput.value, productSubCategoryInput.dataset.selectedValue);
-        }, 100);
+        categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category.id;
+            option.textContent = `${category.name} (${category.type})`;
+            select.appendChild(option);
+        });
+
+        // Load sub-categories if category selected
+        if (productIdInput.value && productCategoryInput.value) {
+            await loadSubCategories(productCategoryInput.value, productSubCategoryInput.dataset.selectedValue);
+        }
+    } catch (error) {
+        console.error('Error loading categories:', error);
     }
 }
 
-function loadSubCategories(categoryId, selectedSub = null) {
+async function loadSubCategories(categoryId, selectedSub = null) {
     productSubCategoryInput.innerHTML = '<option value="">Select sub-category</option>';
     if (!categoryId) return;
-    
-    const category = dataService.getCategoryById(categoryId);
-    if (category && category.subCategories) {
-        category.subCategories.forEach(sub => {
-            const option = document.createElement('option');
-            option.value = sub;
-            option.textContent = sub;
-            if (selectedSub === sub) option.selected = true;
-            productSubCategoryInput.appendChild(option);
-        });
+
+    try {
+        const category = await dataService.getCategoryById(categoryId);
+        if (category && category.subCategories) {
+            category.subCategories.forEach(sub => {
+                const option = document.createElement('option');
+                option.value = sub;
+                option.textContent = sub;
+                if (selectedSub === sub) option.selected = true;
+                productSubCategoryInput.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading subcategories:', error);
+    }
+}
+
+/**
+ * Upload image file to server
+ * @param {File} file - Image file to upload
+ * @returns {Promise<string>} - URL of uploaded image
+ */
+async function uploadImageToServer(file) {
+    try {
+        const result = await dataService.uploadImage(file);
+        return result.url;
+    } catch (error) {
+        console.error('Upload failed:', error);
+        throw new Error('Image upload failed: ' + error.message);
     }
 }
 
@@ -229,7 +255,7 @@ function loadSubCategories(categoryId, selectedSub = null) {
 function openAddModal() {
     modalTitle.textContent = 'Add Product';
     productForm.reset();
-    
+
     // Reset variants defaults
     hasSizesCheckbox.checked = true;
     hasColorsCheckbox.checked = false;
@@ -237,7 +263,7 @@ function openAddModal() {
     colorsSection.style.display = 'none';
     selectedColors.clear();
     renderColorSwatches();
-    
+
     productIdInput.value = '';
     productSubCategoryInput.innerHTML = '<option value="">Select sub-category</option>';
     productSubCategoryInput.dataset.selectedValue = ''; // Reset dataset
@@ -246,35 +272,34 @@ function openAddModal() {
     primaryImagePreview.innerHTML = '';
     subImagesPreview.innerHTML = '';
     loadCategoryDropdown();
-    
+
     modal.classList.add('show');
 }
 
 // Open edit modal
-function openEditModal(product) {
+async function openEditModal(product) {
     modalTitle.textContent = 'Edit Product';
     productIdInput.value = product.id;
     productNameInput.value = product.name;
     productPriceInput.value = product.price;
-    productCategoryInput.value = product.category;
-    
+
+    // Handle category ID
+    const categoryId = product.category_id;
+    productCategoryInput.value = categoryId;
+
     // Store sub-category for later loading
-    productSubCategoryInput.dataset.selectedValue = product.subCategory || '';
-    
+    productSubCategoryInput.dataset.selectedValue = product.sub_category || '';
+
     productStockInput.value = product.stock;
-    productDescriptionInput.value = product.description;
+    productDescriptionInput.value = product.description || '';
 
     // Set variants
     const hasSizes = product.sizes && product.sizes.length > 0;
     const hasColors = product.colors && product.colors.length > 0;
-    
-    // If neither (legacy data), assume sizes if sizes exist, otherwise default to sizes enabled?
-    // Actually if sizes array is empty but it was a product that required sizes, it might be weird.
-    // But logic says: check if array has items.
-    
+
     hasSizesCheckbox.checked = hasSizes;
     hasColorsCheckbox.checked = hasColors;
-    
+
     sizesSection.style.display = hasSizes ? 'block' : 'none';
     colorsSection.style.display = hasColors ? 'block' : 'none';
 
@@ -289,21 +314,22 @@ function openEditModal(product) {
         product.colors.forEach(c => selectedColors.add(c));
     }
     renderColorSwatches();
-    
+
     // Set flags
-    isTrendingInput.checked = product.isTrending;
-    isPopularInput.checked = product.isPopular;
-    isMenCollectionInput.checked = product.isMenCollection;
-    isWomenCollectionInput.checked = product.isWomenCollection;
+    isTrendingInput.checked = product.is_trending || false;
+    isPopularInput.checked = product.is_popular || false;
+    isMenCollectionInput.checked = product.is_men_collection || false;
+    isWomenCollectionInput.checked = product.is_women_collection || false;
 
     // Set primary image
-    primaryImageUrlInput.value = product.primaryImage;
+    primaryImageUrlInput.value = product.primary_image || '';
     updatePrimaryImagePreview();
 
-    // Set sub images
+    // Set sub images (using product.images from backend)
     const container = document.getElementById('subImagesContainer');
     container.innerHTML = '';
-    product.subImages.forEach((img, index) => {
+    const subImages = product.images || product.subImages || [];
+    subImages.forEach((img, index) => {
         const div = document.createElement('div');
         div.className = 'sub-image-input';
         div.style.marginBottom = '0.75rem';
@@ -327,7 +353,12 @@ function openEditModal(product) {
 
     formError.classList.remove('show');
     formError.textContent = '';
-    loadCategoryDropdown();
+    await loadCategoryDropdown();
+
+    // Set category value after dropdown is loaded
+    productCategoryInput.value = categoryId;
+    await loadSubCategories(categoryId, product.sub_category);
+
     modal.classList.add('show');
 }
 
@@ -367,7 +398,7 @@ function updatePrimaryImagePreview() {
     if (url) {
         primaryImagePreview.innerHTML = `
             <div class="preview-item">
-                <img src="${url}" alt="Primary Image">
+                <img src="${url}" alt="Primary Image" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📷</text></svg>'">
             </div>
         `;
     } else {
@@ -375,16 +406,24 @@ function updatePrimaryImagePreview() {
     }
 }
 
-// Handle primary image file upload
-function handlePrimaryImageFile(e) {
+// Handle primary image file upload - NOW UPLOADS TO SERVER
+async function handlePrimaryImageFile(e) {
     const file = e.target.files[0];
     if (file) {
-        const reader = new FileReader();
-        reader.onload = function (event) {
-            primaryImageUrlInput.value = event.target.result;
+        try {
+            showError('Uploading image...');
+            formError.style.color = '#666';
+
+            const url = await uploadImageToServer(file);
+            primaryImageUrlInput.value = url;
             updatePrimaryImagePreview();
-        };
-        reader.readAsDataURL(file);
+
+            formError.classList.remove('show');
+            formError.style.color = '';
+        } catch (error) {
+            formError.style.color = '';
+            showError('Failed to upload image: ' + error.message);
+        }
     }
 }
 
@@ -398,7 +437,7 @@ function updateSubImagesPreview() {
     if (urls.length > 0) {
         subImagesPreview.innerHTML = urls.map(url => `
             <div class="preview-item">
-                <img src="${url}" alt="Sub Image">
+                <img src="${url}" alt="Sub Image" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📷</text></svg>'">
             </div>
         `).join('');
     } else {
@@ -406,18 +445,26 @@ function updateSubImagesPreview() {
     }
 }
 
-// Handle sub image file uploads
-document.addEventListener('change', function (e) {
+// Handle sub image file uploads - NOW UPLOADS TO SERVER
+document.addEventListener('change', async function (e) {
     if (e.target.classList.contains('sub-image-file')) {
         const file = e.target.files[0];
         if (file) {
-            const reader = new FileReader();
-            const urlInput = e.target.previousElementSibling;
-            reader.onload = function (event) {
-                urlInput.value = event.target.result;
+            try {
+                const urlInput = e.target.previousElementSibling;
+                urlInput.value = 'Uploading...';
+                urlInput.disabled = true;
+
+                const url = await uploadImageToServer(file);
+                urlInput.value = url;
+                urlInput.disabled = false;
                 updateSubImagesPreview();
-            };
-            reader.readAsDataURL(file);
+            } catch (error) {
+                const urlInput = e.target.previousElementSibling;
+                urlInput.value = '';
+                urlInput.disabled = false;
+                alert('Failed to upload image: ' + error.message);
+            }
         }
     }
 });
@@ -431,71 +478,75 @@ document.addEventListener('input', function (e) {
 
 // Save product
 async function saveProduct() {
-    const productId = productIdInput.value;
-    const productName = productNameInput.value.trim();
-    const productPrice = parseFloat(productPriceInput.value);
-    const productCategory = productCategoryInput.value;
-    const productSubCategory = productSubCategoryInput.value;
-    const productStock = parseInt(productStockInput.value);
-    const productDescription = productDescriptionInput.value.trim();
-
-    // Get selected sizes
-    const sizes = Array.from(document.querySelectorAll('input[name="size"]:checked'))
-        .map(cb => cb.value);
-    
-    // Get selected colors
-    const colors = Array.from(selectedColors);
-
-    // Get primary image
-    const primaryImage = primaryImageUrlInput.value.trim();
-
-    // Get sub images
-    const subImageUrls = Array.from(document.querySelectorAll('.sub-image-url'))
-        .map(input => input.value.trim())
-        .filter(url => url !== '');
-
-    // Validate
-    if (!productName) {
-        showError('Product name is required');
-        return;
-    }
-
-    if (!productPrice || productPrice <= 0) {
-        showError('Valid price is required');
-        return;
-    }
-
-    if (!productCategory) {
-        showError('Category is required');
-        return;
-    }
-
-    if (!hasSizesCheckbox.checked && !hasColorsCheckbox.checked) {
-        showError('At least one variant type (Size or Color) must be enabled');
-        return;
-    }
-
-    if (hasSizesCheckbox.checked && sizes.length === 0) {
-        showError('At least one size must be selected');
-        return;
-    }
-
-    if (hasColorsCheckbox.checked && colors.length === 0) {
-        showError('At least one color must be entered');
-        return;
-    }
-
-    if (!primaryImage) {
-        showError('Primary image is required');
-        return;
-    }
-
-    if (subImageUrls.length < 3) {
-        showError('At least 3 sub images are required');
-        return;
-    }
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
 
     try {
+        const productId = productIdInput.value;
+        const productName = productNameInput.value.trim();
+        const productPrice = parseFloat(productPriceInput.value);
+        const productCategory = productCategoryInput.value;
+        const productSubCategory = productSubCategoryInput.value;
+        const productStock = parseInt(productStockInput.value) || 0;
+        const productDescription = productDescriptionInput.value.trim();
+
+        // Get selected sizes
+        const sizes = Array.from(document.querySelectorAll('input[name="size"]:checked'))
+            .map(cb => cb.value);
+
+        // Get selected colors
+        const colors = Array.from(selectedColors);
+
+        // Get primary image
+        const primaryImage = primaryImageUrlInput.value.trim();
+
+        // Get sub images
+        const subImageUrls = Array.from(document.querySelectorAll('.sub-image-url'))
+            .map(input => input.value.trim())
+            .filter(url => url !== '' && !url.includes('Uploading'));
+
+        // Validate
+        if (!productName) {
+            showError('Product name is required');
+            return;
+        }
+
+        if (!productPrice || productPrice <= 0) {
+            showError('Valid price is required');
+            return;
+        }
+
+        if (!productCategory) {
+            showError('Category is required');
+            return;
+        }
+
+        if (!hasSizesCheckbox.checked && !hasColorsCheckbox.checked) {
+            showError('At least one variant type (Size or Color) must be enabled');
+            return;
+        }
+
+        if (hasSizesCheckbox.checked && sizes.length === 0) {
+            showError('At least one size must be selected');
+            return;
+        }
+
+        if (hasColorsCheckbox.checked && colors.length === 0) {
+            showError('At least one color must be entered');
+            return;
+        }
+
+        if (!primaryImage) {
+            showError('Primary image is required');
+            return;
+        }
+
+        if (subImageUrls.length < 3) {
+            showError('At least 3 sub images are required');
+            return;
+        }
+
         const productData = {
             name: productName,
             price: productPrice,
@@ -503,10 +554,10 @@ async function saveProduct() {
             subCategory: productSubCategory,
             stock: productStock,
             description: productDescription,
-            sizes: sizes,
-            colors: colors,
+            sizes: hasSizesCheckbox.checked ? sizes : [],
+            colors: hasColorsCheckbox.checked ? colors : [],
             primaryImage: primaryImage,
-            subImages: subImageUrls,
+            images: subImageUrls,
             isTrending: isTrendingInput.checked,
             isPopular: isPopularInput.checked,
             isMenCollection: isMenCollectionInput.checked,
@@ -515,16 +566,19 @@ async function saveProduct() {
 
         if (productId) {
             // Update existing product
-            dataService.updateProduct(productId, productData);
+            await dataService.updateProduct(productId, productData);
         } else {
             // Create new product
-            dataService.createProduct(productData);
+            await dataService.createProduct(productData);
         }
 
         closeModal();
-        loadProducts();
+        await loadProducts();
     } catch (error) {
         showError(error.message);
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Product';
     }
 }
 
@@ -535,98 +589,127 @@ function showError(message) {
 }
 
 // Delete product
-function deleteProduct(id, name) {
+async function deleteProduct(id, name) {
     if (!confirm(`Are you sure you want to delete "${name}"?\n\nThis action cannot be undone.`)) {
         return;
     }
 
     try {
-        dataService.deleteProduct(id);
-        loadProducts();
+        await dataService.deleteProduct(id);
+        await loadProducts();
     } catch (error) {
         alert(error.message);
     }
 }
 
 // Load products table
-function loadProducts() {
-    const products = dataService.getProducts();
-    const categories = dataService.getCategories();
-    const container = document.getElementById('productsTableContainer');
+async function loadProducts() {
+    try {
+        const products = await dataService.getProducts();
+        const categories = await dataService.getCategories();
+        const container = document.getElementById('productsTableContainer');
 
-    if (products.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">📦</div>
-                <div class="empty-state-text">No products yet</div>
-                <button class="btn btn-primary mt-1" onclick="openAddModal()">Add Your First Product</button>
+        if (products.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📦</div>
+                    <div class="empty-state-text">No products yet</div>
+                    <button class="btn btn-primary mt-1" onclick="openAddModal()">Add Your First Product</button>
+                </div>
+            `;
+            return;
+        }
+
+        const tableHTML = `
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Product Name</th>
+                            <th>Price</th>
+                            <th>Category</th>
+                            <th>Stock</th>
+                            <th>Flags</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${products.map(product => {
+            const categoryId = product.category_id;
+            const category = categories.find(c => c.id === categoryId);
+            const categoryName = category ? category.name : 'Unknown';
+
+            return `
+                                <tr>
+                                    <td>
+                                        <img src="${product.primary_image}" alt="${product.name}" 
+                                             style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;"
+                                             onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📷</text></svg>'">
+                                    </td>
+                                    <td><strong>${product.name}</strong></td>
+                                    <td>₹${product.price.toLocaleString()}</td>
+                                    <td>${categoryName}</td>
+                                    <td>${product.stock}</td>
+                                    <td>
+                                        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                                            ${product.is_trending ? '<span class="badge badge-warning">Trending</span>' : ''}
+                                            ${product.is_popular ? '<span class="badge badge-success">Popular</span>' : ''}
+                                            ${product.is_men_collection ? '<span class="badge badge-primary">Men</span>' : ''}
+                                            ${product.is_women_collection ? '<span class="badge badge-primary">Women</span>' : ''}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="table-actions">
+                                            <button class="btn btn-secondary btn-sm" onclick='editProductById("${product.id}")'>
+                                                Edit
+                                            </button>
+                                            <button class="btn btn-danger btn-sm" onclick='deleteProduct("${product.id}", "${product.name.replace(/'/g, "\\'")}");'>
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+        }).join('')}
+                    </tbody>
+                </table>
             </div>
         `;
-        return;
+
+        container.innerHTML = tableHTML;
+    } catch (error) {
+        console.error('Error loading products:', error);
+        document.getElementById('productsTableContainer').innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">⚠️</div>
+                <div class="empty-state-text">Failed to load products</div>
+                <div>${error.message}</div>
+                <button class="btn btn-primary mt-1" onclick="loadProducts()">Retry</button>
+            </div>
+        `;
     }
+}
 
-    const tableHTML = `
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Image</th>
-                        <th>Product Name</th>
-                        <th>Price</th>
-                        <th>Category</th>
-                        <th>Stock</th>
-                        <th>Flags</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${products.map(product => {
-        const category = categories.find(c => c.id === product.category);
-        const categoryName = category ? category.name : 'Unknown';
-
-        return `
-                            <tr>
-                                <td>
-                                    <img src="${product.primaryImage}" alt="${product.name}" 
-                                         style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
-                                </td>
-                                <td><strong>${product.name}</strong></td>
-                                <td>₹${product.price.toLocaleString()}</td>
-                                <td>${categoryName}</td>
-                                <td>${product.stock}</td>
-                                <td>
-                                    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                        ${product.isTrending ? '<span class="badge badge-warning">Trending</span>' : ''}
-                                        ${product.isPopular ? '<span class="badge badge-success">Popular</span>' : ''}
-                                        ${product.isMenCollection ? '<span class="badge badge-primary">Men</span>' : ''}
-                                        ${product.isWomenCollection ? '<span class="badge badge-primary">Women</span>' : ''}
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="table-actions">
-                                        <button class="btn btn-secondary btn-sm" onclick='editProduct(${JSON.stringify(product).replace(/'/g, "&apos;")})'>
-                                            Edit
-                                        </button>
-                                        <button class="btn btn-danger btn-sm" onclick='deleteProduct("${product.id}", "${product.name}")'>
-                                            Delete
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
-    }).join('')}
-                </tbody>
-            </table>
-        </div>
-    `;
-
-    container.innerHTML = tableHTML;
+// Edit product by ID (fetch fresh data)
+async function editProductById(productId) {
+    try {
+        const product = await dataService.getProductById(productId);
+        if (product) {
+            await openEditModal(product);
+        } else {
+            alert('Product not found');
+        }
+    } catch (error) {
+        alert('Failed to load product: ' + error.message);
+    }
 }
 
 // Make functions globally accessible
 window.openAddModal = openAddModal;
-window.editProduct = openEditModal;
+window.editProductById = editProductById;
 window.deleteProduct = deleteProduct;
+window.loadProducts = loadProducts;
 
 // Initialize
 loadCategoryDropdown();

@@ -7,7 +7,7 @@
     'use strict';
 
     // Wait for DOM to be fully loaded
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', async function () {
         // Check if we're on the index page
         const popularContainer = document.getElementById('popularProducts');
         const trendingContainer = document.getElementById('trendingProducts');
@@ -23,7 +23,7 @@
          */
         function createProductCard(product) {
             const productLink = `product.html?id=${product.id}&name=${encodeURIComponent(product.name)}&price=${product.price}&image=${encodeURIComponent(product.image)}`;
-            const imageUrl = `${product.image}?w=600&q=80`;
+            const imageUrl = typeof getImageUrl === 'function' ? getImageUrl(product.image, '?w=600&q=80') : product.image;
 
             const card = document.createElement('a');
             card.href = productLink;
@@ -77,12 +77,12 @@
             }
         }
 
-        // Load Popular Products
-        const popularProducts = getPopularProducts();
+        // Load Popular Products (async)
+        const popularProducts = await getPopularProducts();
         loadProducts(popularProducts, popularContainer, 8);
 
-        // Load Trending Products
-        const trendingProducts = getTrendingProducts();
+        // Load Trending Products (async)
+        const trendingProducts = await getTrendingProducts();
         loadProducts(trendingProducts, trendingContainer, 8);
 
         // Add click event prevention for wishlist hearts

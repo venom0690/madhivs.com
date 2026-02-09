@@ -1,5 +1,6 @@
 /**
  * Categories Management Logic
+ * Fixed with proper async/await for API calls
  */
 
 // Auth guard
@@ -102,24 +103,28 @@ function closeModal() {
     renderSubCategories();
 }
 
-// Save category
-function saveCategory() {
-    const categoryId = categoryIdInput.value;
-    const categoryName = categoryNameInput.value.trim();
-    const categoryType = categoryTypeInput.value;
-
-    // Validate
-    if (!categoryName) {
-        showError('Category name is required');
-        return;
-    }
-
-    if (!categoryType) {
-        showError('Category type is required');
-        return;
-    }
+// Save category - FIXED with async/await
+async function saveCategory() {
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
 
     try {
+        const categoryId = categoryIdInput.value;
+        const categoryName = categoryNameInput.value.trim();
+        const categoryType = categoryTypeInput.value;
+
+        // Validate
+        if (!categoryName) {
+            showError('Category name is required');
+            return;
+        }
+
+        if (!categoryType) {
+            showError('Category type is required');
+            return;
+        }
+
         const categoryData = {
             name: categoryName,
             type: categoryType,
@@ -128,16 +133,19 @@ function saveCategory() {
 
         if (categoryId) {
             // Update existing category
-            dataService.updateCategory(categoryId, categoryData);
+            await dataService.updateCategory(categoryId, categoryData);
         } else {
             // Create new category
-            dataService.createCategory(categoryData);
+            await dataService.createCategory(categoryData);
         }
 
         closeModal();
-        loadCategories();
+        await loadCategories();
     } catch (error) {
         showError(error.message);
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Category';
     }
 }
 
@@ -147,84 +155,114 @@ function showError(message) {
     formError.classList.add('show');
 }
 
-// Delete category
-function deleteCategory(id, name) {
+// Delete category - FIXED with async/await
+async function deleteCategory(id, name) {
     if (!confirm(`Are you sure you want to delete "${name}"?\n\nThis action cannot be undone.`)) {
         return;
     }
 
     try {
-        dataService.deleteCategory(id);
-        loadCategories();
+        await dataService.deleteCategory(id);
+        await loadCategories();
     } catch (error) {
         alert(error.message);
     }
 }
 
-// Load categories table
-function loadCategories() {
-    const categories = dataService.getCategories();
+// Load categories table - FIXED with async/await
+async function loadCategories() {
     const container = document.getElementById('categoriesTableContainer');
 
-    if (categories.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">🏷️</div>
-                <div class="empty-state-text">No categories yet</div>
-                <button class="btn btn-primary mt-1" onclick="openAddModal()">Add Your First Category</button>
+    try {
+        const categories = await dataService.getCategories();
+
+        if (categories.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🏷️</div>
+                    <div class="empty-state-text">No categories yet</div>
+                    <button class="btn btn-primary mt-1" onclick="openAddModal()">Add Your First Category</button>
+                </div>
+            `;
+            return;
+        }
+
+        const tableHTML = `
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Category Name</th>
+                            <th>Type</th>
+                            <th>Sub-Categories</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${categories.map(category => `
+                            <tr>
+                                <td><strong>${category.name}</strong></td>
+                                <td>
+                                    <span class="badge ${category.type === 'Men' ? 'badge-primary' :
+                category.type === 'Women' ? 'badge-success' :
+                    'badge-warning'
+            }">
+                                        ${category.type}
+                                    </span>
+                                </td>
+                                <td>${(category.subCategories || []).join(', ') || '-'}</td>
+                                <td>${new Date(category.created_at).toLocaleDateString()}</td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn btn-secondary btn-sm" onclick='editCategoryById("${category.id}")'>
+                                            Edit
+                                        </button>
+                                        <button class="btn btn-danger btn-sm" onclick='deleteCategory("${category.id}", "${category.name.replace(/'/g, "\\'")}");'>
+                                            Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
             </div>
         `;
-        return;
+
+        container.innerHTML = tableHTML;
+    } catch (error) {
+        console.error('Error loading categories:', error);
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">⚠️</div>
+                <div class="empty-state-text">Failed to load categories</div>
+                <div>${error.message}</div>
+                <button class="btn btn-primary mt-1" onclick="loadCategories()">Retry</button>
+            </div>
+        `;
     }
+}
 
-    const tableHTML = `
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Category Name</th>
-                        <th>Type</th>
-                        <th>Created</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${categories.map(category => `
-                        <tr>
-                            <td><strong>${category.name}</strong></td>
-                            <td>
-                                <span class="badge ${category.type === 'Men' ? 'badge-primary' :
-            category.type === 'Women' ? 'badge-success' :
-                'badge-warning'
-        }">
-                                    ${category.type}
-                                </span>
-                            </td>
-                            <td>${new Date(category.createdAt).toLocaleDateString()}</td>
-                            <td>
-                                <div class="table-actions">
-                                    <button class="btn btn-secondary btn-sm" onclick='editCategory(${JSON.stringify(category)})'>
-                                        Edit
-                                    </button>
-                                    <button class="btn btn-danger btn-sm" onclick='deleteCategory("${category.id}", "${category.name}")'>
-                                        Delete
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        </div>
-    `;
-
-    container.innerHTML = tableHTML;
+// Edit category by ID (fetch fresh data)
+async function editCategoryById(categoryId) {
+    try {
+        const category = await dataService.getCategoryById(categoryId);
+        if (category) {
+            openEditModal(category);
+        } else {
+            alert('Category not found');
+        }
+    } catch (error) {
+        alert('Failed to load category: ' + error.message);
+    }
 }
 
 // Make functions globally accessible
 window.openAddModal = openAddModal;
-window.editCategory = openEditModal;
+window.editCategoryById = editCategoryById;
 window.deleteCategory = deleteCategory;
+window.loadCategories = loadCategories;
 
 // Initialize
 loadCategories();

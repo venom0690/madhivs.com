@@ -6,7 +6,7 @@
 (function () {
     'use strict';
 
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', async function () {
         const productGrid = document.getElementById('productGrid');
 
         if (!productGrid) {
@@ -14,14 +14,14 @@
         }
 
         // Check if we should use admin data
-        if (typeof AdminDataBridge === 'undefined' || !AdminDataBridge.hasData()) {
+        if (typeof AdminDataBridge === 'undefined' || !(await AdminDataBridge.hasData())) {
             // No admin data, keep hardcoded HTML products
             console.log('Using hardcoded products (no admin data)');
             return;
         }
 
-        // Load products from admin panel
-        const womenProducts = getWomenProducts(); // Uses admin data via products.js
+        // Load products from admin panel (async)
+        const womenProducts = await getWomenProducts();
 
         if (!womenProducts || womenProducts.length === 0) {
             console.log('No women\'s products found in admin panel, keeping hardcoded');
@@ -52,7 +52,7 @@
      */
     function createProductCard(product) {
         const productLink = `product.html?id=${product.id}&name=${encodeURIComponent(product.name)}&price=${product.price}&image=${encodeURIComponent(product.image)}`;
-        const imageUrl = `${product.image}?w=600&q=80`;
+        const imageUrl = typeof getImageUrl === 'function' ? getImageUrl(product.image, '?w=600&q=80') : product.image;
 
         const card = document.createElement('a');
         card.href = productLink;

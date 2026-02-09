@@ -232,45 +232,59 @@ const productsData = {
     ]
 };
 
-// Helper functions - Now use Admin Data Bridge with fallback
-const getAllProducts = () => {
+/**
+ * Helper: Only append image query params to external URLs (Unsplash etc.)
+ * Local /uploads/ paths break if you add ?w=600&q=80
+ */
+function getImageUrl(src, params) {
+    if (!src) return src;
+    if (src.startsWith('http://') || src.startsWith('https://')) {
+        return src + (params || '');
+    }
+    return src; // local path — return as-is
+}
+
+// Helper functions - Now use Admin Data Bridge with fallback (ASYNC)
+const getAllProducts = async () => {
     // Try to get products from admin panel first
-    if (typeof AdminDataBridge !== 'undefined' && AdminDataBridge.hasData()) {
-        return AdminDataBridge.getWebsiteProducts();
+    if (typeof AdminDataBridge !== 'undefined' && await AdminDataBridge.hasData()) {
+        return await AdminDataBridge.getWebsiteProducts();
     }
     // Fallback to hardcoded data
     return [...productsData.men, ...productsData.women];
 };
 
-const getPopularProducts = () => {
+const getPopularProducts = async () => {
     // Try to get from admin panel first
-    if (typeof AdminDataBridge !== 'undefined' && AdminDataBridge.hasData()) {
-        const adminPopular = AdminDataBridge.getPopularProducts();
+    if (typeof AdminDataBridge !== 'undefined' && await AdminDataBridge.hasData()) {
+        const adminPopular = await AdminDataBridge.getPopularProducts();
         return adminPopular.map(AdminDataBridge.transformProduct);
     }
     // Fallback to hardcoded data
-    return getAllProducts().filter(product => product.isPopular);
+    const all = await getAllProducts();
+    return all.filter(product => product.isPopular);
 };
 
-const getTrendingProducts = () => {
+const getTrendingProducts = async () => {
     // Try to get from admin panel first
-    if (typeof AdminDataBridge !== 'undefined' && AdminDataBridge.hasData()) {
-        const adminTrending = AdminDataBridge.getTrendingProducts();
+    if (typeof AdminDataBridge !== 'undefined' && await AdminDataBridge.hasData()) {
+        const adminTrending = await AdminDataBridge.getTrendingProducts();
         return adminTrending.map(AdminDataBridge.transformProduct);
     }
     // Fallback to hardcoded data
-    return getAllProducts().filter(product => product.isTrending);
+    const all = await getAllProducts();
+    return all.filter(product => product.isTrending);
 };
 
-const getMenProducts = () => {
+const getMenProducts = async () => {
     // Try to get from admin panel first
-    if (typeof AdminDataBridge !== 'undefined' && AdminDataBridge.hasData()) {
-        const adminMen = AdminDataBridge.getMenProducts();
+    if (typeof AdminDataBridge !== 'undefined' && await AdminDataBridge.hasData()) {
+        const adminMen = await AdminDataBridge.getMenProducts();
         if (adminMen.length > 0) {
             return adminMen.map(AdminDataBridge.transformProduct);
         }
         // Fallback: get by category type
-        const menByCategory = AdminDataBridge.getProductsByCategoryType('Men');
+        const menByCategory = await AdminDataBridge.getProductsByCategoryType('Men');
         if (menByCategory.length > 0) {
             return menByCategory.map(AdminDataBridge.transformProduct);
         }
@@ -279,15 +293,15 @@ const getMenProducts = () => {
     return productsData.men;
 };
 
-const getWomenProducts = () => {
+const getWomenProducts = async () => {
     // Try to get from admin panel first
-    if (typeof AdminDataBridge !== 'undefined' && AdminDataBridge.hasData()) {
-        const adminWomen = AdminDataBridge.getWomenProducts();
+    if (typeof AdminDataBridge !== 'undefined' && await AdminDataBridge.hasData()) {
+        const adminWomen = await AdminDataBridge.getWomenProducts();
         if (adminWomen.length > 0) {
             return adminWomen.map(AdminDataBridge.transformProduct);
         }
         // Fallback: get by category type
-        const womenByCategory = AdminDataBridge.getProductsByCategoryType('Women');
+        const womenByCategory = await AdminDataBridge.getProductsByCategoryType('Women');
         if (womenByCategory.length > 0) {
             return womenByCategory.map(AdminDataBridge.transformProduct);
         }
