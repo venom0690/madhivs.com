@@ -145,10 +145,15 @@ CREATE TABLE shipping_addresses (
 -- ============================================
 -- INSERT DEFAULT ADMIN
 -- ============================================
--- Password: Admin@123 (hashed with bcrypt)
--- Change this in production!
-INSERT INTO admins (name, email, password) VALUES 
-('Admin', 'admin@maadhivs.com', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5gyui3cqHFqEe');
+-- DO NOT hardcode bcrypt hashes here — they are unique per generation
+-- and pasting one from elsewhere will NOT match the original password.
+--
+-- Instead, run the seed script AFTER creating the schema:
+--   node seeds/seedAdmin.js
+--
+-- Default credentials (set via env or defaults):
+--   Email:    admin@maadhivs.com
+--   Password: Admin@123
 
 -- ============================================
 -- SAMPLE DATA (Optional - for testing)
