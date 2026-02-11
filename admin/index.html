@@ -37,7 +37,7 @@
                     style="margin-top: 1rem; padding: 1rem; background-color: #f0f9ff; border-radius: 0.375rem; font-size: 13px; color: #0369a1;">
                     <strong>Demo Credentials:</strong><br>
                     Email: admin@maadhivs.com<br>
-                    Password: admin123
+                    Password: Admin@123
                 </div>
             </form>
         </div>
@@ -49,10 +49,10 @@
         authService.redirectIfAuthenticated();
 
         // Handle login form submission
-        document.getElementById('loginForm').addEventListener('submit', function (e) {
+        document.getElementById('loginForm').addEventListener('submit', async function (e) {
             e.preventDefault();
 
-            const email = document.getElementById('email').value;
+            const email = document.getElementById('email').value.trim().toLowerCase();
             const password = document.getElementById('password').value;
             const errorMessage = document.getElementById('errorMessage');
             const loginBtn = document.getElementById('loginBtn');
@@ -65,23 +65,21 @@
             loginBtn.disabled = true;
             loginBtn.textContent = 'Signing in...';
 
-            // Attempt login
-            setTimeout(() => {
-                const result = authService.login(email, password);
+            try {
+                // Attempt login (async call)
+                const admin = await authService.login(email, password);
 
-                if (result.success) {
-                    // Redirect to dashboard
-                    window.location.href = 'dashboard.html';
-                } else {
-                    // Show error
-                    errorMessage.textContent = result.error;
-                    errorMessage.classList.add('show');
+                // Redirect to dashboard on success
+                window.location.href = 'dashboard.html';
+            } catch (error) {
+                // Show error
+                errorMessage.textContent = error.message || 'Invalid email or password';
+                errorMessage.classList.add('show');
 
-                    // Re-enable button
-                    loginBtn.disabled = false;
-                    loginBtn.textContent = 'Sign In';
-                }
-            }, 500);
+                // Re-enable button
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Sign In';
+            }
         });
     </script>
 </body>

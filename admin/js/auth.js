@@ -114,4 +114,11 @@ const authService = {
             return false;
         }
     },
+
+    // Redirect to dashboard if already authenticated (for login page)
+    redirectIfAuthenticated() {
+        if (this.isAuthenticated()) {
+            window.location.href = 'dashboard.html';
+        }
+    },
 };
