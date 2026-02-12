@@ -340,7 +340,7 @@ nav {
 .slider-controls {
     position: absolute;
     bottom: 30px;
-    left: 48px;
+    left: 48%;
     transform: translateX(-50%);
     display: flex;
     gap: var(--space-sm);
