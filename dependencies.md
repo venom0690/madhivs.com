@@ -1,4 +1,4 @@
-# Dependencies and Run Guide
+# Dependencies and Run Guide by Preetam
 
 This document lists all required dependencies for this project and explains how to run it on other PCs in two scenarios:
 - Modules not present (fresh machine)
@@ -99,3 +99,4 @@ The server fails fast if JWT_SECRET is missing.
 
 - Frontend is static (HTML/CSS/JS) and served by the backend; no build step required.
 - Backend serves API under `/api` and static files from project root.
+

@@ -1,10 +1,42 @@
-# Maadhivs Boutique — E-Commerce Platform
+# 👗 Maadhivs Boutique — E-Commerce Platform
 
-A full-stack luxury fashion e-commerce website with an admin panel, built with vanilla HTML/CSS/JS frontend and Node.js + MySQL backend.
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
+[![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0-blue)](https://www.mysql.com/)
+
+A high-end, full-stack luxury fashion e-commerce platform. Built with a responsive vanilla JavaScript frontend and a robust Node.js + Express backend, featuring a comprehensive administrative dashboard for complete business management.
 
 ---
 
-## 🏗️ Architecture Diagram
+## ✨ Key Features
+
+### 🛍️ Customer Experience
+- **Responsive Design**: Fully optimized for mobile, tablet, and desktop viewing.
+- **Dynamic Catalog**: Real-time product filtering by categories and subcategories.
+- **Persistent Cart & Wishlist**: Save items across sessions using browser local storage.
+- **Seamless Checkout**: Streamlined ordering process with shipping address validation.
+- **Product Discovery**: Advanced search functionality with custom keyword mapping.
+
+### ⚙️ Administrative Dashboard
+- **Inventory Management**: Full CRUD operations for products, including multi-image uploads.
+- **Category Control**: Manage hierarchical categories (Men/Women/General) and subcategories.
+- **Order Tracking**: Monitor and update order statuses (Pending/Shipped/Delivered).
+- **Homepage Customization**: Manage hero sliders, trending products, and popular collections.
+- **Secure Access**: JWT-based authentication with bcrypt password hashing.
+
+---
+
+## 🏗️ System Architecture
+
+```mermaid
+graph TD
+    Client[Browser: HTML5/CSS3/ES6] -->|Fetch API + JWT| API[Node.js + Express Server]
+    API -->|mysql2| DB[(MySQL Database)]
+    API -->|Local Storage| Uploads[server/uploads/]
+```
+
+<details>
+<summary><b>View Detailed ASCII Diagram</b></summary>
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -33,352 +65,97 @@ A full-stack luxury fashion e-commerce website with an admin panel, built with v
 ┌──────────────────────────────────────────────────────────────────────┐
 │                    NODE.JS SERVER (Express)                           │
 │                    http://localhost:5000                              │
-│                                                                      │
-│  ┌────────────────────────────────────────────────────────────────┐  │
-│  │                      API Routes (/api/...)                     │  │
-│  │                                                                │  │
-│  │  POST /api/admin/login        ← Auth (public)                 │  │
-│  │  GET  /api/admin/me           ← Auth (protected)              │  │
-│  │                                                                │  │
-│  │  GET  /api/categories         ← Categories (public)           │  │
-│  │  POST /api/categories         ← Categories (protected)        │  │
-│  │  PUT  /api/categories/:id     ← Categories (protected)        │  │
-│  │  DELETE /api/categories/:id   ← Categories (protected)        │  │
-│  │                                                                │  │
-│  │  GET  /api/products           ← Products (public)             │  │
-│  │  GET  /api/products/:id       ← Products (public)             │  │
-│  │  POST /api/products           ← Products (protected)          │  │
-│  │  PUT  /api/products/:id       ← Products (protected)          │  │
-│  │  DELETE /api/products/:id     ← Products (protected)          │  │
-│  │                                                                │  │
-│  │  POST /api/orders             ← Orders (public - checkout)    │  │
-│  │  GET  /api/orders             ← Orders (protected)            │  │
-│  │  GET  /api/orders/:id         ← Orders (protected)            │  │
-│  │  PATCH /api/orders/:id        ← Orders (protected)            │  │
-│  │                                                                │  │
-│  │  POST /api/upload             ← Image Upload (protected)      │  │
-│  └────────────────────────────────────────────────────────────────┘  │
-│                                                                      │
-│  Middleware: JWT Auth │ CORS │ Body Parser │ Static File Serving     │
-│  Storage:   /uploads/ (local images)                                 │
 └──────────────────────────────┬───────────────────────────────────────┘
                                │ mysql2
                                ▼
 ┌──────────────────────────────────────────────────────────────────────┐
 │                      MySQL DATABASE                                  │
-│                      (XAMPP / WAMP / standalone)                      │
-│                                                                      │
-│   ┌──────────┐  ┌────────────┐  ┌──────────┐  ┌──────────────────┐  │
-│   │  admins   │  │ categories │  │ products │  │     orders       │  │
-│   │          │  │            │  │          │  │                  │  │
-│   │ id       │  │ id         │  │ id       │  │ id               │  │
-│   │ name     │  │ name       │  │ name     │  │ order_number     │  │
-│   │ email    │  │ slug       │  │ slug     │  │ customer_name    │  │
-│   │ password │  │ type       │  │ price    │  │ customer_email   │  │
-│   └──────────┘  │ parent_id  │  │ category │  │ total_amount     │  │
-│                 └────────────┘  │   _id    │  │ order_status     │  │
-│                                 └──────────┘  └────────┬─────────┘  │
-│                                                        │            │
-│   ┌──────────────────┐    ┌────────────────────────────┘            │
-│   │ shipping_        │    │                                         │
-│   │ addresses        │    ▼                                         │
-│   │                  │  ┌──────────────┐                            │
-│   │ id               │  │ order_items  │                            │
-│   │ order_id         │  │              │                            │
-│   │ street, city,    │  │ id           │                            │
-│   │ state, pincode   │  │ order_id     │                            │
-│   └──────────────────┘  │ product_name │                            │
-│                         │ price, qty   │                            │
-│                         └──────────────┘                            │
 └──────────────────────────────────────────────────────────────────────┘
 ```
+</details>
 
 ---
 
-## 📦 All Dependencies
+## 🛠️ Tech Stack
 
-### System Requirements (must install separately)
+### Frontend
+- **HTML5 / CSS3**: Semantic structure and modern styling.
+- **JavaScript (ES6+)**: Pure JS for interactivity (no heavy frameworks).
+- **Fetch API**: For asynchronous communication with the backend.
+- **LocalStorage**: Client-side state persistence.
 
-| Dependency | Version | Purpose | Download |
-|-----------|---------|---------|----------|
-| **Node.js** | 18+ | JavaScript runtime | [nodejs.org](https://nodejs.org/) |
-| **MySQL** | 5.7+ / 8.x | Database | Via XAMPP or standalone |
-| **XAMPP** (recommended) | Any | Bundles MySQL + phpMyAdmin | [apachefriends.org](https://www.apachefriends.org/) |
+### Backend
+- **Node.js**: Scalable runtime environment.
+- **Express.js**: Lightweight web framework for API routing.
+- **JWT**: Secure authentication for administrative actions.
+- **Multer**: Efficient handling of multi-part image uploads.
 
-### NPM Packages (auto-installed via `npm install`)
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| **express** | ^4.18.2 | Web server & routing |
-| **mysql2** | ^3.6.5 | MySQL database driver (with Promises) |
-| **jsonwebtoken** | ^9.0.2 | JWT tokens for admin authentication |
-| **bcryptjs** | ^2.4.3 | Password hashing |
-| **multer** | ^1.4.5-lts.1 | Image file upload handling |
-| **cors** | ^2.8.5 | Cross-origin resource sharing |
-| **dotenv** | ^16.3.1 | Environment variable loading |
-| **nodemon** | ^3.0.2 | *(dev only)* Auto-restart on file changes |
-
-### Frontend (no install needed — loaded from browser)
-
-| Technology | Purpose |
-|-----------|---------|
-| HTML5 | Page structure |
-| CSS3 | Styling & responsive design |
-| JavaScript (ES6+) | Interactivity, API calls |
-| localStorage | Cart & wishlist persistence |
-| Fetch API | HTTP requests to backend |
+### Database
+- **MySQL**: Relational data storage for products, orders, and users.
 
 ---
 
-## 🚀 Step-by-Step Setup Guide
+## 🚀 Quick Start Guide
 
-### Step 1: Install Prerequisites
+For detailed system requirements and alternative installation methods, please refer to the **[Dependencies Guide](dependencies.md)**.
 
-#### 1a. Install Node.js
-1. Go to [nodejs.org](https://nodejs.org/)
-2. Download the **LTS** version (18 or newer)
-3. Run the installer → click Next through all steps
-4. Verify installation:
+### 1. Database Setup
+1. Start MySQL (via XAMPP or standalone).
+2. Create a database named `maadhivs_boutique`.
+3. Import the schema:
    ```bash
-   node --version    # Should show v18.x.x or higher
-   npm --version     # Should show 9.x.x or higher
+   mysql -u root maadhivs_boutique < server/schema.sql
    ```
 
-#### 1b. Install XAMPP (for MySQL)
-1. Go to [apachefriends.org](https://www.apachefriends.org/)
-2. Download XAMPP for Windows
-3. Run the installer → install with default settings
-4. Open **XAMPP Control Panel**
-5. Click **Start** next to **MySQL**
-6. The status should turn green ✅
-
----
-
-### Step 2: Create the Database
-
-#### Option A: Using phpMyAdmin (recommended)
-1. Open your browser → go to **http://localhost/phpmyadmin**
-2. Click **"New"** in the left sidebar
-3. Enter database name: `maadhivs_boutique`
-4. Click **Create**
-5. Click the **"Import"** tab at the top
-6. Click **"Choose File"** → navigate to `server/schema.sql`
-7. Click **"Go"** at the bottom
-
-#### Option B: Using MySQL command line
-```bash
-mysql -u root -e "CREATE DATABASE maadhivs_boutique;"
-mysql -u root maadhivs_boutique < server/schema.sql
-```
-
-After import, you should see 6 tables:
-- `admins` (1 default admin user)
-- `categories` (3 sample categories)
-- `products` (empty — add via admin panel)
-- `orders` (empty)
-- `order_items` (empty)
-- `shipping_addresses` (empty)
-
----
-
-### Step 3: Configure Environment
-
+### 2. Environment Configuration
 ```bash
 cd server
-copy .env.example .env
+cp .env.example .env
+# Edit .env and set your DB credentials and a strong JWT_SECRET
 ```
 
-Open `.env` and verify these values match your MySQL setup:
-
-```env
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=
-DB_NAME=maadhivs_boutique
-PORT=5000
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-```
-
-> **Note**: XAMPP's default MySQL has user `root` with no password. If you set a password, update `DB_PASSWORD`.
-
----
-
-### Step 4: Install Node.js Dependencies
-
+### 3. Installation & Launch
 ```bash
 cd server
 npm install
-```
-
-This installs the 7 packages listed in the dependency table above.
-
----
-
-### Step 5: Start the Server
-
-```bash
 npm start
 ```
 
-You should see:
-```
-MySQL Connected: localhost
-Server running on port 5000
-API: http://localhost:5000/api
-Uploads: http://localhost:5000/uploads
-```
-
-> **For development** (auto-restart on code changes):
-> ```bash
-> npm run dev
-> ```
-
----
-
-### Step 6: Open the Website
-
-| Page | URL |
-|------|-----|
-| 🏠 **Homepage** | http://localhost:5000 |
-| 🛒 **Shop** | http://localhost:5000/shop.html |
-| 👔 **Men** | http://localhost:5000/men.html |
-| 👗 **Women** | http://localhost:5000/women.html |
-| 🛍️ **Cart** | http://localhost:5000/cart.html |
-| ❤️ **Wishlist** | http://localhost:5000/wishlist.html |
-| ⚙️ **Admin Login** | http://localhost:5000/admin/ |
-| 📊 **Admin Dashboard** | http://localhost:5000/admin/dashboard.html |
-
----
-
-### Step 7: Log in to Admin Panel
-
-1. Go to **http://localhost:5000/admin/**
-2. Enter credentials:
-   - **Email**: `admin@maadhivs.com`
-   - **Password**: `Admin@123`
-3. You'll be redirected to the dashboard
-
-> ⚠️ **Change these credentials in production!**
+### 4. Access URLs
+- **Main Website**: [http://localhost:5000](http://localhost:5000)
+- **Admin Panel**: [http://localhost:5000/admin/](http://localhost:5000/admin/)
+  - *Default Credentials*: `admin@maadhivs.com` / `Admin@123`
 
 ---
 
 ## 📁 Project Structure
 
-```
+```text
 maadhivs-boutique/
-│
-├── 📄 index.html              ← Homepage
-├── 📄 shop.html               ← All products
-├── 📄 men.html                ← Men's collection
-├── 📄 women.html              ← Women's collection
-├── 📄 product.html            ← Product detail page
-├── 📄 cart.html               ← Shopping cart
-├── 📄 checkout.html           ← Checkout form
-├── 📄 wishlist.html           ← Wishlist page
-├── 📄 success.html            ← Order confirmation
-├── 📄 about.html              ← About page
-├── 📄 contact.html            ← Contact page
-│
-├── 📁 css/                    ← All stylesheets
-├── 📁 images/                 ← Static images (logo, banners)
-│
-├── 📁 js/                     ← Frontend JavaScript
-│   ├── main.js                ← Cart, checkout, notifications
-│   ├── admin-data-bridge.js   ← Connects frontend to backend API
-│   ├── product.js             ← Product listing logic
-│   ├── product-detail.js      ← Product detail page logic
-│   ├── home-products.js       ← Homepage product loader
-│   ├── search.js              ← Search functionality
-│   ├── wishlist.js            ← Wishlist logic
-│   ├── cart.js                ← Cart utilities
-│   └── ...                    ← Other page scripts
-│
-├── 📁 admin/                  ← Admin panel
-│   ├── index.html             ← Login page
-│   ├── dashboard.html         ← Dashboard
-│   ├── products.html          ← Product management
-│   ├── categories.html        ← Category management
-│   ├── orders.html            ← Order management
-│   └── 📁 js/                 ← Admin scripts
-│       ├── auth.js            ← JWT authentication
-│       ├── data-service.js    ← API communication layer
-│       ├── products-admin.js  ← Product CRUD
-│       ├── categories-admin.js← Category CRUD
-│       ├── orders-admin.js    ← Order management
-│       └── dashboard.js       ← Dashboard statistics
-│
-└── 📁 server/                 ← Backend (Node.js)
-    ├── server.js              ← Express app entry point
-    ├── db.js                  ← MySQL connection pool
-    ├── schema.sql             ← Database schema
-    ├── .env                   ← Environment variables
-    ├── package.json           ← Dependencies
-    │
-    ├── 📁 controllers/        ← Business logic
-    │   ├── authController.js
-    │   ├── categoryController.js
-    │   ├── productController.js
-    │   ├── orderController.js
-    │   └── uploadController.js
-    │
-    ├── 📁 routes/             ← API endpoint definitions
-    │   ├── authRoutes.js
-    │   ├── categoryRoutes.js
-    │   ├── productRoutes.js
-    │   ├── orderRoutes.js
-    │   └── uploadRoutes.js
-    │
-    ├── 📁 middleware/         ← Express middleware
-    │   └── auth.js            ← JWT verification
-    │
-    ├── 📁 seeds/              ← Database seeding
-    │   └── seedAdmin.js       ← Create admin user
-    │
-    └── 📁 uploads/            ← Uploaded product images
+├── 📄 *.html             # Client-facing pages (index, shop, cart, etc.)
+├── 📁 css/               # Modular stylesheets
+├── 📁 js/                # Client-side logic and API bridges
+├── 📁 admin/             # Administrative dashboard files
+└── 📁 server/            # Backend Node.js application
+    ├── 📁 controllers/   # Business logic
+    ├── 📁 routes/        # API endpoint definitions
+    ├── 📁 middleware/    # Auth & security handlers
+    ├── 📄 server.js      # Entry point
+    └── 📄 schema.sql     # Database definition
 ```
 
 ---
 
-## 🗄️ Database Tables
-
-| Table | Rows (default) | Purpose |
-|-------|----------------|---------|
-| `admins` | 1 | Admin users (login credentials) |
-| `categories` | 3 | Product categories (Sarees, Kurtas, Accessories) |
-| `products` | 0 | Products (add via admin panel) |
-| `orders` | 0 | Customer orders |
-| `order_items` | 0 | Individual items in each order |
-| `shipping_addresses` | 0 | Delivery addresses per order |
+## 🛡️ Security Features
+- **Bcrypt Hashing**: Passwords are never stored in plain text.
+- **JWT Guards**: Protected routes require valid bearer tokens.
+- **Multer Validation**: Strict file size and type limits for uploads.
+- **SQL Injection Protection**: Prepared statements via `mysql2/promise`.
 
 ---
 
-## 🐛 Troubleshooting
-
-| Problem | Solution |
-|---------|----------|
-| `MySQL Connection Error` | Start MySQL in XAMPP Control Panel |
-| `EADDRINUSE: port 5000` | Another process uses port 5000 — kill it or change `PORT` in `.env` |
-| `Cannot find module 'express'` | Run `npm install` in the `server/` directory |
-| `Access denied for user 'root'` | Check `DB_PASSWORD` in `.env` matches your MySQL password |
-| Images not loading | Ensure `server/uploads/` folder exists |
-| Admin login fails | Re-import `schema.sql` or run `npm run seed` |
-| Products not showing on website | Add products via admin panel first |
+## 🤝 Support & Contribution
+For issues or feature requests, please check the existing documentation or contact the development team.
 
 ---
-
-## 📚 NPM Scripts
-
-```bash
-cd server
-
-npm start        # Start production server
-npm run dev      # Start dev server (auto-restart on changes)
-npm run seed     # Create default admin user
-```
-
----
-
-## 📄 License
-
-ISC
-# madhivs.com
+© 2026 Maadhivs Boutique. All rights reserved.

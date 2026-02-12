@@ -203,7 +203,7 @@ if (!process.env.JWT_SECRET) {
 
 # ✅ SAFE TO DEPLOY
 
-All critical bugs are fixed. All security holes are patched. The codebase is stable, robust, and production-ready for a freelance client deployment.
+All critical bugs are fixed. All security holes are patched. The codebase is stable, robust, and production-ready for client deployment.
 
 **Pre-deployment checklist:**
 1. Run `migration_subcategory.sql` if not done yet
