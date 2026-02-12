@@ -1,6 +1,6 @@
 /**
  * Categories Management Logic
- * Fixed with proper async/await for API calls
+ * Updated for parent_id subcategory system
  */
 
 // Auth guard
@@ -24,15 +24,11 @@ const categoryForm = document.getElementById('categoryForm');
 const categoryIdInput = document.getElementById('categoryId');
 const categoryNameInput = document.getElementById('categoryName');
 const categoryTypeInput = document.getElementById('categoryType');
-const subCategoryInput = document.getElementById('subCategoryInput');
-const subCategoriesList = document.getElementById('subCategoriesList');
+const parentCategoryInput = document.getElementById('parentCategory');
 const formError = document.getElementById('formError');
-
-let currentSubCategories = [];
 
 // Modal controls
 document.getElementById('addCategoryBtn').addEventListener('click', openAddModal);
-document.getElementById('addSubCategoryBtn').addEventListener('click', addSubCategory);
 document.getElementById('closeModal').addEventListener('click', closeModal);
 document.getElementById('cancelBtn').addEventListener('click', closeModal);
 document.getElementById('saveBtn').addEventListener('click', saveCategory);
@@ -45,65 +41,58 @@ modal.addEventListener('click', (e) => {
 });
 
 // Open add modal
-function openAddModal() {
+async function openAddModal() {
     modalTitle.textContent = 'Add Category';
     categoryForm.reset();
     categoryIdInput.value = '';
-    currentSubCategories = [];
-    renderSubCategories();
     formError.classList.remove('show');
     formError.textContent = '';
+    await loadParentCategoryDropdown();
     modal.classList.add('show');
 }
 
 // Open edit modal
-function openEditModal(category) {
+async function openEditModal(category) {
     modalTitle.textContent = 'Edit Category';
     categoryIdInput.value = category.id;
     categoryNameInput.value = category.name;
     categoryTypeInput.value = category.type;
-    currentSubCategories = category.subCategories || [];
-    renderSubCategories();
     formError.classList.remove('show');
     formError.textContent = '';
+    await loadParentCategoryDropdown(category.id);
+    parentCategoryInput.value = category.parent_id || '';
     modal.classList.add('show');
 }
 
-function addSubCategory() {
-    const val = subCategoryInput.value.trim();
-    if (val && !currentSubCategories.includes(val)) {
-        currentSubCategories.push(val);
-        subCategoryInput.value = '';
-        renderSubCategories();
+// Load parent category dropdown
+async function loadParentCategoryDropdown(excludeId = null) {
+    try {
+        const categories = await dataService.getCategories();
+        const select = parentCategoryInput;
+
+        select.innerHTML = '<option value="">None (Main Category)</option>';
+
+        // Only show main categories (parent_id = null) as parent options
+        const mainCategories = categories.filter(cat => !cat.parent_id && cat.id !== excludeId);
+
+        mainCategories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category.id;
+            option.textContent = `${category.name} (${category.type})`;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading parent categories:', error);
     }
 }
-
-function removeSubCategory(index) {
-    currentSubCategories.splice(index, 1);
-    renderSubCategories();
-}
-
-function renderSubCategories() {
-    subCategoriesList.innerHTML = currentSubCategories.map((sub, index) => `
-        <div style="background: #eee; padding: 2px 8px; border-radius: 12px; display: flex; align-items: center; font-size: 0.9rem;">
-            ${sub}
-            <span onclick="removeSubCategory(${index})" style="margin-left: 6px; cursor: pointer; color: #666; font-weight: bold;">&times;</span>
-        </div>
-    `).join('');
-}
-
-// Make globally accessible
-window.removeSubCategory = removeSubCategory;
 
 // Close modal
 function closeModal() {
     modal.classList.remove('show');
     categoryForm.reset();
-    currentSubCategories = [];
-    renderSubCategories();
 }
 
-// Save category - FIXED with async/await
+// Save category
 async function saveCategory() {
     const saveBtn = document.getElementById('saveBtn');
     saveBtn.disabled = true;
@@ -113,6 +102,7 @@ async function saveCategory() {
         const categoryId = categoryIdInput.value;
         const categoryName = categoryNameInput.value.trim();
         const categoryType = categoryTypeInput.value;
+        const parentId = parentCategoryInput.value || null;
 
         // Validate
         if (!categoryName) {
@@ -128,7 +118,7 @@ async function saveCategory() {
         const categoryData = {
             name: categoryName,
             type: categoryType,
-            subCategories: currentSubCategories
+            parent_id: parentId
         };
 
         if (categoryId) {
@@ -155,9 +145,9 @@ function showError(message) {
     formError.classList.add('show');
 }
 
-// Delete category - FIXED with async/await
+// Delete category
 async function deleteCategory(id, name) {
-    if (!confirm(`Are you sure you want to delete "${name}"?\n\nThis action cannot be undone.`)) {
+    if (!confirm(`Are you sure you want to delete "${name}"?\n\nIf this is a parent category, all subcategories will also be deleted.\n\nThis action cannot be undone.`)) {
         return;
     }
 
@@ -169,7 +159,7 @@ async function deleteCategory(id, name) {
     }
 }
 
-// Load categories table - FIXED with async/await
+// Load categories table with nested structure
 async function loadCategories() {
     const container = document.getElementById('categoriesTableContainer');
 
@@ -187,6 +177,70 @@ async function loadCategories() {
             return;
         }
 
+        // Separate main categories and subcategories
+        const mainCategories = categories.filter(cat => !cat.parent_id);
+        const subcategories = categories.filter(cat => cat.parent_id);
+
+        // Build rows with nested structure
+        let rows = '';
+
+        mainCategories.forEach(parent => {
+            // Parent row
+            rows += `
+                <tr style="background-color: #f8f9fa;">
+                    <td><strong>${parent.name}</strong></td>
+                    <td>
+                        <span class="badge ${parent.type === 'Men' ? 'badge-primary' :
+                    parent.type === 'Women' ? 'badge-success' :
+                        'badge-warning'}">
+                            ${parent.type}
+                        </span>
+                    </td>
+                    <td>Main Category</td>
+                    <td>${new Date(parent.created_at).toLocaleDateString()}</td>
+                    <td>
+                        <div class="table-actions">
+                            <button class="btn btn-secondary btn-sm" onclick='editCategoryById("${parent.id}")'>
+                                Edit
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick='deleteCategory("${parent.id}", "${parent.name.replace(/'/g, "\\'")}");'>
+                                Delete
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+
+            // Subcategory rows
+            const subs = subcategories.filter(sub => sub.parent_id === parent.id);
+            subs.forEach(sub => {
+                rows += `
+                    <tr>
+                        <td style="padding-left: 2rem;">├─ ${sub.name}</td>
+                        <td>
+                            <span class="badge ${sub.type === 'Men' ? 'badge-primary' :
+                        sub.type === 'Women' ? 'badge-success' :
+                            'badge-warning'}">
+                                ${sub.type}
+                            </span>
+                        </td>
+                        <td>Subcategory of ${parent.name}</td>
+                        <td>${new Date(sub.created_at).toLocaleDateString()}</td>
+                        <td>
+                            <div class="table-actions">
+                                <button class="btn btn-secondary btn-sm" onclick='editCategoryById("${sub.id}")'>
+                                    Edit
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick='deleteCategory("${sub.id}", "${sub.name.replace(/'/g, "\\'")}");'>
+                                    Delete
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        });
+
         const tableHTML = `
             <div class="table-container">
                 <table>
@@ -194,37 +248,13 @@ async function loadCategories() {
                         <tr>
                             <th>Category Name</th>
                             <th>Type</th>
-                            <th>Sub-Categories</th>
+                            <th>Level</th>
                             <th>Created</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${categories.map(category => `
-                            <tr>
-                                <td><strong>${category.name}</strong></td>
-                                <td>
-                                    <span class="badge ${category.type === 'Men' ? 'badge-primary' :
-                category.type === 'Women' ? 'badge-success' :
-                    'badge-warning'
-            }">
-                                        ${category.type}
-                                    </span>
-                                </td>
-                                <td>${(category.subCategories || []).join(', ') || '-'}</td>
-                                <td>${new Date(category.created_at).toLocaleDateString()}</td>
-                                <td>
-                                    <div class="table-actions">
-                                        <button class="btn btn-secondary btn-sm" onclick='editCategoryById("${category.id}")'>
-                                            Edit
-                                        </button>
-                                        <button class="btn btn-danger btn-sm" onclick='deleteCategory("${category.id}", "${category.name.replace(/'/g, "\\'")}");'>
-                                            Delete
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        `).join('')}
+                        ${rows}
                     </tbody>
                 </table>
             </div>
@@ -249,7 +279,7 @@ async function editCategoryById(categoryId) {
     try {
         const category = await dataService.getCategoryById(categoryId);
         if (category) {
-            openEditModal(category);
+            await openEditModal(category);
         } else {
             alert('Category not found');
         }

@@ -280,7 +280,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             id: (productData && productData.id) ? productData.id : productName.replace(/\s+/g, '-').toLowerCase(),
             name: productData ? productData.name : productName,
             price: productData ? parseInt(productData.price) : parseInt(productPrice),
-            image: (productData ? productData.image : productImage) + '?w=200&q=80',
+            image: productData ? productData.image : productImage,
             size: selectedSize,
             color: selectedColor,
             quantity: quantity
@@ -306,7 +306,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             id: (productData && productData.id) ? productData.id : productName.replace(/\s+/g, '-').toLowerCase(),
             name: productData ? productData.name : productName,
             price: productData ? parseInt(productData.price) : parseInt(productPrice),
-            image: (productData ? productData.image : productImage) + '?w=200&q=80',
+            image: productData ? productData.image : productImage,
             size: selectedSize,
             color: selectedColor,
             quantity: quantity

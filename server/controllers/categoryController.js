@@ -17,7 +17,7 @@ function slugify(text) {
  */
 exports.getAllCategories = async (req, res) => {
     try {
-        const { type } = req.query;
+        const { type, nested } = req.query;
 
         let query = 'SELECT * FROM categories WHERE is_active = 1';
         const params = [];
@@ -27,15 +27,34 @@ exports.getAllCategories = async (req, res) => {
             params.push(type);
         }
 
-        query += ' ORDER BY created_at DESC';
+        query += ' ORDER BY parent_id, name';
 
         const [categories] = await db.query(query, params);
 
-        res.status(200).json({
-            status: 'success',
-            results: categories.length,
-            categories
-        });
+        // If nested format is requested, group subcategories under parents
+        if (nested === 'true') {
+            const parentCategories = categories.filter(cat => !cat.parent_id);
+            const nestedCategories = parentCategories.map(parent => {
+                const subcategories = categories.filter(cat => cat.parent_id === parent.id);
+                return {
+                    ...parent,
+                    subcategories
+                };
+            });
+
+            res.status(200).json({
+                status: 'success',
+                results: nestedCategories.length,
+                categories: nestedCategories
+            });
+        } else {
+            // Return flat list
+            res.status(200).json({
+                status: 'success',
+                results: categories.length,
+                categories
+            });
+        }
 
     } catch (error) {
         console.error('Get categories error:', error);
@@ -84,7 +103,7 @@ exports.getCategory = async (req, res) => {
  */
 exports.createCategory = async (req, res) => {
     try {
-        const { name, type, description, image } = req.body;
+        const { name, type, description, image, parent_id } = req.body;
 
         // Basic validation
         if (!name || !type) {
@@ -94,13 +113,28 @@ exports.createCategory = async (req, res) => {
             });
         }
 
+        // If parent_id is provided, verify parent category exists
+        if (parent_id) {
+            const [parentCategories] = await db.query(
+                'SELECT id FROM categories WHERE id = ?',
+                [parent_id]
+            );
+
+            if (parentCategories.length === 0) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'Parent category not found'
+                });
+            }
+        }
+
         // Generate slug
         const slug = slugify(name);
 
         // Insert category
         const [result] = await db.query(
-            'INSERT INTO categories (name, slug, type, description, image) VALUES (?, ?, ?, ?, ?)',
-            [name, slug, type, description || null, image || null]
+            'INSERT INTO categories (name, slug, type, description, image, parent_id) VALUES (?, ?, ?, ?, ?, ?)',
+            [name, slug, type, description || null, image || null, parent_id || null]
         );
 
         // Get created category
@@ -137,7 +171,7 @@ exports.createCategory = async (req, res) => {
  */
 exports.updateCategory = async (req, res) => {
     try {
-        const { name, type, description, image, is_active } = req.body;
+        const { name, type, description, image, is_active, parent_id } = req.body;
 
         const updates = [];
         const params = [];
@@ -163,6 +197,23 @@ exports.updateCategory = async (req, res) => {
         if (is_active !== undefined) {
             updates.push('is_active = ?');
             params.push(is_active ? 1 : 0);
+        }
+        if (parent_id !== undefined) {
+            // Validate parent exists if not null
+            if (parent_id !== null) {
+                const [parentCategories] = await db.query(
+                    'SELECT id FROM categories WHERE id = ?',
+                    [parent_id]
+                );
+                if (parentCategories.length === 0) {
+                    return res.status(400).json({
+                        status: 'error',
+                        message: 'Parent category not found'
+                    });
+                }
+            }
+            updates.push('parent_id = ?');
+            params.push(parent_id);
         }
 
         if (updates.length === 0) {

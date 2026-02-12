@@ -143,6 +143,7 @@ const dataService = (function () {
 
         // Map camelCase → snake_case
         if (data.category !== undefined) payload.category_id = data.category;
+        if (data.subcategory_id !== undefined) payload.subcategory_id = data.subcategory_id;
         if (data.primaryImage !== undefined) payload.primary_image = data.primaryImage;
         if (data.isTrending !== undefined) payload.is_trending = data.isTrending;
         if (data.isPopular !== undefined) payload.is_popular = data.isPopular;

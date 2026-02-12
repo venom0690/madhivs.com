@@ -2,6 +2,12 @@ const db = require('../db');
 const fs = require('fs').promises;
 const path = require('path');
 
+// Safe JSON parse — prevents server crash from malformed DB data
+function safeJsonParse(str, fallback = []) {
+    if (!str) return fallback;
+    try { return JSON.parse(str); } catch { return fallback; }
+}
+
 // Simple slugify function
 function slugify(text) {
     return text
@@ -21,6 +27,7 @@ exports.getAllProducts = async (req, res) => {
     try {
         const {
             category,
+            subcategory,
             trending,
             popular,
             featured,
@@ -37,6 +44,11 @@ exports.getAllProducts = async (req, res) => {
         if (category) {
             query += ' AND category_id = ?';
             params.push(category);
+        }
+
+        if (subcategory) {
+            query += ' AND subcategory_id = ?';
+            params.push(subcategory);
         }
 
         if (trending === 'true') {
@@ -77,9 +89,9 @@ exports.getAllProducts = async (req, res) => {
         // Parse JSON fields
         const parsedProducts = products.map(product => ({
             ...product,
-            images: product.images ? JSON.parse(product.images) : [],
-            sizes: product.sizes ? JSON.parse(product.sizes) : [],
-            colors: product.colors ? JSON.parse(product.colors) : []
+            images: safeJsonParse(product.images),
+            sizes: safeJsonParse(product.sizes),
+            colors: safeJsonParse(product.colors)
         }));
 
         res.status(200).json({
@@ -105,7 +117,15 @@ exports.getProduct = async (req, res) => {
     try {
         const { idOrSlug } = req.params;
 
-        let query = 'SELECT p.*, c.name as category_name, c.type as category_type FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE ';
+        let query = `
+            SELECT p.*, 
+                   c.name as category_name, 
+                   c.type as category_type,
+                   sc.name as subcategory_name
+            FROM products p 
+            LEFT JOIN categories c ON p.category_id = c.id 
+            LEFT JOIN categories sc ON p.subcategory_id = sc.id
+            WHERE `;
         let param;
 
         if (isNaN(idOrSlug)) {
@@ -128,9 +148,9 @@ exports.getProduct = async (req, res) => {
         const product = products[0];
 
         // Parse JSON fields
-        product.images = product.images ? JSON.parse(product.images) : [];
-        product.sizes = product.sizes ? JSON.parse(product.sizes) : [];
-        product.colors = product.colors ? JSON.parse(product.colors) : [];
+        product.images = safeJsonParse(product.images);
+        product.sizes = safeJsonParse(product.sizes);
+        product.colors = safeJsonParse(product.colors);
 
         res.status(200).json({
             status: 'success',
@@ -158,6 +178,7 @@ exports.createProduct = async (req, res) => {
             price,
             discount_price,
             category_id,
+            subcategory_id,
             stock,
             primary_image,
             images,
@@ -180,6 +201,21 @@ exports.createProduct = async (req, res) => {
             });
         }
 
+        // Validate subcategory belongs to category if provided
+        if (subcategory_id) {
+            const [subcategories] = await db.query(
+                'SELECT id FROM categories WHERE id = ? AND parent_id = ?',
+                [subcategory_id, category_id]
+            );
+
+            if (subcategories.length === 0) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'Subcategory does not belong to the selected category'
+                });
+            }
+        }
+
         // Generate slug
         const slug = slugify(name);
 
@@ -191,13 +227,13 @@ exports.createProduct = async (req, res) => {
         // Insert product
         const [result] = await db.query(
             `INSERT INTO products (
-                name, slug, description, price, discount_price, category_id, stock,
+                name, slug, description, price, discount_price, category_id, subcategory_id, stock,
                 primary_image, images, sizes, colors,
                 is_trending, is_popular, is_featured, is_men_collection, is_women_collection,
                 seo_title, seo_description
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-                name, slug, description || null, price, discount_price || null, category_id, stock || 0,
+                name, slug, description || null, price, discount_price || null, category_id, subcategory_id || null, stock || 0,
                 primary_image, imagesJson, sizesJson, colorsJson,
                 is_trending ? 1 : 0, is_popular ? 1 : 0, is_featured ? 1 : 0,
                 is_men_collection ? 1 : 0, is_women_collection ? 1 : 0,
@@ -212,9 +248,9 @@ exports.createProduct = async (req, res) => {
         );
 
         const product = products[0];
-        product.images = JSON.parse(product.images);
-        product.sizes = JSON.parse(product.sizes);
-        product.colors = JSON.parse(product.colors);
+        product.images = safeJsonParse(product.images);
+        product.sizes = safeJsonParse(product.sizes);
+        product.colors = safeJsonParse(product.colors);
 
         res.status(201).json({
             status: 'success',
@@ -248,10 +284,41 @@ exports.updateProduct = async (req, res) => {
         const params = [];
 
         const allowedFields = [
-            'name', 'description', 'price', 'discount_price', 'category_id', 'stock',
+            'name', 'description', 'price', 'discount_price', 'category_id', 'subcategory_id', 'stock',
             'primary_image', 'is_trending', 'is_popular', 'is_featured',
             'is_men_collection', 'is_women_collection', 'seo_title', 'seo_description'
         ];
+
+        // Validate subcategory belongs to category if both are being updated
+        if (req.body.subcategory_id !== undefined && req.body.subcategory_id !== null) {
+            const categoryId = req.body.category_id;
+
+            // If category_id is not in the update, fetch current category_id
+            let targetCategoryId = categoryId;
+            if (!categoryId) {
+                const [currentProduct] = await db.query(
+                    'SELECT category_id FROM products WHERE id = ?',
+                    [req.params.id]
+                );
+                if (currentProduct.length > 0) {
+                    targetCategoryId = currentProduct[0].category_id;
+                }
+            }
+
+            if (targetCategoryId) {
+                const [subcategories] = await db.query(
+                    'SELECT id FROM categories WHERE id = ? AND parent_id = ?',
+                    [req.body.subcategory_id, targetCategoryId]
+                );
+
+                if (subcategories.length === 0) {
+                    return res.status(400).json({
+                        status: 'error',
+                        message: 'Subcategory does not belong to the selected category'
+                    });
+                }
+            }
+        }
 
         for (const field of allowedFields) {
             if (req.body[field] !== undefined) {

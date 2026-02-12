@@ -109,7 +109,14 @@ exports.deleteImage = (req, res) => {
         });
     }
 
-    const filePath = path.join(UPLOAD_DIR, filename);
+    // SECURITY: Prevent path traversal attacks
+    const filePath = path.join(UPLOAD_DIR, path.basename(filename));
+    if (!filePath.startsWith(UPLOAD_DIR)) {
+        return res.status(400).json({
+            status: 'error',
+            message: 'Invalid filename'
+        });
+    }
 
     if (!fs.existsSync(filePath)) {
         return res.status(404).json({

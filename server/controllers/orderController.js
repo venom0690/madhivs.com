@@ -5,39 +5,40 @@ const db = require('../db');
  * POST /api/orders
  */
 exports.createOrder = async (req, res) => {
+    const {
+        customerInfo,
+        items,
+        totalAmount,
+        shippingAddress,
+        paymentMethod,
+        notes
+    } = req.body;
+
+    // Basic validation — BEFORE acquiring connection to prevent pool leaks
+    if (!customerInfo || !customerInfo.name || !customerInfo.email || !customerInfo.phone) {
+        return res.status(400).json({
+            status: 'error',
+            message: 'Customer information is required'
+        });
+    }
+
+    if (!items || items.length === 0) {
+        return res.status(400).json({
+            status: 'error',
+            message: 'Order must have at least one item'
+        });
+    }
+
+    if (!shippingAddress || !shippingAddress.street || !shippingAddress.city) {
+        return res.status(400).json({
+            status: 'error',
+            message: 'Shipping address is required'
+        });
+    }
+
     const connection = await db.getConnection();
 
     try {
-        const {
-            customerInfo,
-            items,
-            totalAmount,
-            shippingAddress,
-            paymentMethod,
-            notes
-        } = req.body;
-
-        // Basic validation
-        if (!customerInfo || !customerInfo.name || !customerInfo.email || !customerInfo.phone) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Customer information is required'
-            });
-        }
-
-        if (!items || items.length === 0) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Order must have at least one item'
-            });
-        }
-
-        if (!shippingAddress || !shippingAddress.street || !shippingAddress.city) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Shipping address is required'
-            });
-        }
 
         // Generate order number: MB + YYYYMMDD + random 4 digits
         const date = new Date();

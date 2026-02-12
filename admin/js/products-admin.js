@@ -221,13 +221,16 @@ async function loadSubCategories(categoryId, selectedSub = null) {
     if (!categoryId) return;
 
     try {
-        const category = await dataService.getCategoryById(categoryId);
-        if (category && category.subCategories) {
-            category.subCategories.forEach(sub => {
+        // Fetch all categories and filter for subcategories of the selected category
+        const categories = await dataService.getCategories();
+        const subcategories = categories.filter(cat => cat.parent_id == categoryId);
+
+        if (subcategories.length > 0) {
+            subcategories.forEach(sub => {
                 const option = document.createElement('option');
-                option.value = sub;
-                option.textContent = sub;
-                if (selectedSub === sub) option.selected = true;
+                option.value = sub.id;
+                option.textContent = sub.name;
+                if (selectedSub == sub.id) option.selected = true;
                 productSubCategoryInput.appendChild(option);
             });
         }
@@ -287,8 +290,8 @@ async function openEditModal(product) {
     const categoryId = product.category_id;
     productCategoryInput.value = categoryId;
 
-    // Store sub-category for later loading
-    productSubCategoryInput.dataset.selectedValue = product.sub_category || '';
+    // Store subcategory_id for later loading
+    const subcategoryId = product.subcategory_id;
 
     productStockInput.value = product.stock;
     productDescriptionInput.value = product.description || '';
@@ -357,7 +360,7 @@ async function openEditModal(product) {
 
     // Set category value after dropdown is loaded
     productCategoryInput.value = categoryId;
-    await loadSubCategories(categoryId, product.sub_category);
+    await loadSubCategories(categoryId, subcategoryId);
 
     modal.classList.add('show');
 }
@@ -487,7 +490,7 @@ async function saveProduct() {
         const productName = productNameInput.value.trim();
         const productPrice = parseFloat(productPriceInput.value);
         const productCategory = productCategoryInput.value;
-        const productSubCategory = productSubCategoryInput.value;
+        const productSubCategory = productSubCategoryInput.value || null;
         const productStock = parseInt(productStockInput.value) || 0;
         const productDescription = productDescriptionInput.value.trim();
 
@@ -551,7 +554,7 @@ async function saveProduct() {
             name: productName,
             price: productPrice,
             category: productCategory,
-            subCategory: productSubCategory,
+            subcategory_id: productSubCategory,
             stock: productStock,
             description: productDescription,
             sizes: hasSizesCheckbox.checked ? sizes : [],

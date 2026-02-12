@@ -1,0 +1,41 @@
+RewriteEngine On
+
+✅ Remove .html extension
+
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^([^.]+)$ $1.html [NC,L]
+
+✅ Hide .html from URL
+
+RewriteCond %{THE_REQUEST} \s/([^.]+).html [NC]
+RewriteRule ^ /%1 [NC,L,R=301]
+
+✅ Disable directory browsing
+
+Options -Indexes
+
+✅ Protect sensitive files
+
+<FilesMatch "(.env|.log|composer.json|package.json|package-lock.json)">
+Order allow,deny
+Deny from all
+</FilesMatch>
+
+✅ Block access to server folders
+
+RewriteRule ^(server|config|db|uploads/private) - [F,L]
+
+✅ Protect SQL files
+
+<FilesMatch ".(sql|bak)$">
+Order allow,deny
+Deny from all
+</FilesMatch>
+
+✅ Hide .htaccess itself
+
+<Files .htaccess>
+Order allow,deny
+Deny from all
+</Files>

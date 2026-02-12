@@ -1,4 +1,5 @@
 require('dotenv').config();
+const multer = require('multer');
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -14,6 +15,20 @@ const uploadRoutes = require('./routes/uploadRoutes');
 
 // Initialize express app
 const app = express();
+
+// SECURITY: Fail fast if JWT_SECRET is missing
+if (!process.env.JWT_SECRET) {
+    console.error('FATAL: JWT_SECRET is not set in .env');
+    process.exit(1);
+}
+
+// Security headers
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    next();
+});
 
 // Basic CORS
 app.use(cors({
@@ -60,9 +75,19 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'index.html'));
 });
 
-// Simple error handler
+// Global error handler (includes multer file-size errors)
 app.use((err, req, res, next) => {
     console.error('Error:', err.message);
+
+    // Multer file-size limit
+    if (err instanceof multer.MulterError) {
+        return res.status(400).json({
+            status: 'error',
+            message: err.code === 'LIMIT_FILE_SIZE'
+                ? 'File too large. Maximum size is 5MB.'
+                : err.message
+        });
+    }
 
     const statusCode = err.statusCode || 500;
     res.status(statusCode).json({
@@ -85,6 +110,17 @@ process.on('SIGTERM', () => {
     server.close(() => {
         console.log('Process terminated');
     });
+});
+
+// Prevent silent crashes
+process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled Rejection:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+    // Give server time to finish pending requests, then exit
+    server.close(() => process.exit(1));
 });
 
 module.exports = app;
