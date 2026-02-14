@@ -123,26 +123,26 @@ if (createSubCategoryLink) {
             return;
         }
 
-        const newSub = prompt('Enter new sub-category name:');
-        if (newSub && newSub.trim()) {
+        const newSubName = prompt('Enter new sub-category name:');
+        if (newSubName && newSubName.trim()) {
             try {
-                const category = await dataService.getCategoryById(categoryId);
-                if (category) {
-                    // Initialize subCategories if missing
-                    if (!category.subCategories) category.subCategories = [];
-
-                    // Add if not exists
-                    if (!category.subCategories.includes(newSub.trim())) {
-                        category.subCategories.push(newSub.trim());
-                        await dataService.updateCategory(categoryId, { subCategories: category.subCategories });
-
-                        // Reload dropdown and select new value
-                        loadSubCategories(categoryId, newSub.trim());
-                        alert('Sub-category added!');
-                    } else {
-                        alert('Sub-category already exists.');
-                    }
+                // Get parent category to inherit its type
+                const parentCategory = await dataService.getCategoryById(categoryId);
+                if (!parentCategory) {
+                    alert('Parent category not found.');
+                    return;
                 }
+
+                // Create new subcategory with parent_id
+                const newSubcategory = await dataService.createCategory({
+                    name: newSubName.trim(),
+                    type: parentCategory.type, // Inherit type from parent
+                    parent_id: categoryId
+                });
+
+                // Reload dropdown and select new subcategory
+                await loadSubCategories(categoryId, newSubcategory.id);
+                alert('Sub-category added successfully!');
             } catch (error) {
                 alert('Failed to add sub-category: ' + error.message);
             }

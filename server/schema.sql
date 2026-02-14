@@ -41,7 +41,7 @@ CREATE TABLE categories (
     INDEX idx_type (type),
     INDEX idx_active (is_active),
     INDEX idx_slug (slug),
-    FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE SET NULL
+    FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
@@ -55,6 +55,7 @@ CREATE TABLE products (
     price DECIMAL(10, 2) NOT NULL,
     discount_price DECIMAL(10, 2) DEFAULT NULL,
     category_id INT NOT NULL,
+    subcategory_id INT DEFAULT NULL,
     stock INT DEFAULT 0,
     primary_image VARCHAR(255) NOT NULL,
     images JSON,
@@ -71,6 +72,7 @@ CREATE TABLE products (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_slug (slug),
     INDEX idx_category (category_id),
+    INDEX idx_subcategory (subcategory_id),
     INDEX idx_trending (is_trending),
     INDEX idx_popular (is_popular),
     INDEX idx_featured (is_featured),
@@ -79,7 +81,8 @@ CREATE TABLE products (
     INDEX idx_price (price),
     INDEX idx_created (created_at),
     FULLTEXT idx_search (name, description),
-    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
+    FOREIGN KEY (subcategory_id) REFERENCES categories(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================

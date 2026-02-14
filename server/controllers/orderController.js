@@ -3,6 +3,8 @@ const db = require('../db');
 /**
  * Create order
  * POST /api/orders
+ * FIX #14: Unique order number with retry
+ * FIX #15: Safe connection pool handling
  */
 exports.createOrder = async (req, res) => {
     const {
@@ -18,11 +20,28 @@ exports.createOrder = async (req, res) => {
     if (!customerInfo || !customerInfo.name || !customerInfo.email || !customerInfo.phone) {
         return res.status(400).json({
             status: 'error',
-            message: 'Customer information is required'
+            message: 'Customer information (name, email, phone) is required'
         });
     }
 
-    if (!items || items.length === 0) {
+    // FIX #16: Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(customerInfo.email)) {
+        return res.status(400).json({
+            status: 'error',
+            message: 'Invalid email format'
+        });
+    }
+
+    // Phone validation
+    if (!/^[\d\+\-\s]{7,15}$/.test(customerInfo.phone)) {
+        return res.status(400).json({
+            status: 'error',
+            message: 'Invalid phone number'
+        });
+    }
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({
             status: 'error',
             message: 'Order must have at least one item'
@@ -32,19 +51,72 @@ exports.createOrder = async (req, res) => {
     if (!shippingAddress || !shippingAddress.street || !shippingAddress.city) {
         return res.status(400).json({
             status: 'error',
-            message: 'Shipping address is required'
+            message: 'Shipping address (street, city) is required'
         });
     }
 
-    const connection = await db.getConnection();
+    // Validate total amount
+    const totalNum = parseFloat(totalAmount);
+    if (!totalAmount || isNaN(totalNum) || totalNum <= 0) {
+        return res.status(400).json({
+            status: 'error',
+            message: 'Valid total amount is required'
+        });
+    }
+
+    // Validate each item has required fields
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (!item.name && !item.product_name) {
+            return res.status(400).json({
+                status: 'error',
+                message: `Item ${i + 1} is missing product name`
+            });
+        }
+        if (!item.price || parseFloat(item.price) <= 0) {
+            return res.status(400).json({
+                status: 'error',
+                message: `Item ${i + 1} has invalid price`
+            });
+        }
+        if (!item.quantity || parseInt(item.quantity) < 1) {
+            return res.status(400).json({
+                status: 'error',
+                message: `Item ${i + 1} has invalid quantity`
+            });
+        }
+    }
+
+    // FIX #15: Declare connection outside try so finally can always release
+    let connection;
 
     try {
+        connection = await db.getConnection();
 
-        // Generate order number: MB + YYYYMMDD + random 4 digits
-        const date = new Date();
-        const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
-        const random = Math.floor(1000 + Math.random() * 9000);
-        const orderNumber = `MB${dateStr}${random}`;
+        // FIX #14: Generate unique order number with retry logic
+        let orderNumber;
+        let attempts = 0;
+        const maxAttempts = 5;
+
+        while (attempts < maxAttempts) {
+            const date = new Date();
+            const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+            const random = Math.floor(1000 + Math.random() * 9000);
+            const timestamp = Date.now().toString().slice(-4);
+            orderNumber = `MB${dateStr}${timestamp}${random}`;
+
+            const [existing] = await connection.query(
+                'SELECT id FROM orders WHERE order_number = ?',
+                [orderNumber]
+            );
+
+            if (existing.length === 0) break;
+            attempts++;
+        }
+
+        if (attempts === maxAttempts) {
+            throw new Error('Failed to generate unique order number after ' + maxAttempts + ' attempts');
+        }
 
         // Start transaction
         await connection.beginTransaction();
@@ -57,10 +129,10 @@ exports.createOrder = async (req, res) => {
             ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
                 orderNumber,
-                customerInfo.name,
-                customerInfo.email,
-                customerInfo.phone,
-                totalAmount,
+                customerInfo.name.trim(),
+                customerInfo.email.trim().toLowerCase(),
+                customerInfo.phone.trim(),
+                totalNum,
                 paymentMethod || 'cod',
                 notes || null
             ]
@@ -78,8 +150,8 @@ exports.createOrder = async (req, res) => {
                     orderId,
                     item.product_id || item.id || null,
                     item.name || item.product_name,
-                    item.price,
-                    item.quantity,
+                    parseFloat(item.price),
+                    parseInt(item.quantity),
                     item.size || null,
                     item.color || null,
                     item.image || null
@@ -94,10 +166,10 @@ exports.createOrder = async (req, res) => {
             ) VALUES (?, ?, ?, ?, ?, ?)`,
             [
                 orderId,
-                shippingAddress.street,
-                shippingAddress.city,
-                shippingAddress.state,
-                shippingAddress.pincode,
+                shippingAddress.street.trim(),
+                shippingAddress.city.trim(),
+                shippingAddress.state || null,
+                shippingAddress.pincode || null,
                 shippingAddress.country || 'India'
             ]
         );
@@ -133,7 +205,11 @@ exports.createOrder = async (req, res) => {
         );
 
         const order = orders[0];
-        order.items = order.items_json ? JSON.parse(`[${order.items_json}]`) : [];
+        try {
+            order.items = order.items_json ? JSON.parse(`[${order.items_json}]`) : [];
+        } catch {
+            order.items = [];
+        }
         order.shippingAddress = addresses[0] || null;
         delete order.items_json;
 
@@ -143,14 +219,24 @@ exports.createOrder = async (req, res) => {
         });
 
     } catch (error) {
-        await connection.rollback();
+        // FIX #15: Safe rollback — only if connection exists
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error('Rollback failed:', rollbackError.message);
+            }
+        }
         console.error('Create order error:', error);
         res.status(500).json({
             status: 'error',
             message: 'An error occurred while creating order'
         });
     } finally {
-        connection.release();
+        // FIX #15: Always release connection
+        if (connection) {
+            connection.release();
+        }
     }
 };
 
@@ -171,6 +257,14 @@ exports.getAllOrders = async (req, res) => {
         const params = [];
 
         if (status) {
+            // Validate status against allowed values
+            const validStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+            if (!validStatuses.includes(status)) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'Invalid order status'
+                });
+            }
             query += ' AND o.order_status = ?';
             params.push(status);
         }
@@ -178,8 +272,9 @@ exports.getAllOrders = async (req, res) => {
         query += ' ORDER BY o.created_at DESC';
 
         if (limit) {
+            const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 20));
             query += ' LIMIT ?';
-            params.push(parseInt(limit));
+            params.push(limitNum);
         }
 
         const [orders] = await db.query(query, params);
@@ -261,6 +356,15 @@ exports.updateOrderStatus = async (req, res) => {
         const params = [];
 
         if (order_status) {
+            // Validate order status
+            const validStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+            if (!validStatuses.includes(order_status)) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'Invalid order status. Must be one of: ' + validStatuses.join(', ')
+                });
+            }
+
             updates.push('order_status = ?');
             params.push(order_status);
 
@@ -290,23 +394,23 @@ exports.updateOrderStatus = async (req, res) => {
 
         params.push(req.params.id);
 
-        await db.query(
+        const [result] = await db.query(
             `UPDATE orders SET ${updates.join(', ')} WHERE id = ?`,
             params
         );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Order not found'
+            });
+        }
 
         // Get updated order
         const [orders] = await db.query(
             'SELECT * FROM orders WHERE id = ?',
             [req.params.id]
         );
-
-        if (orders.length === 0) {
-            return res.status(404).json({
-                status: 'error',
-                message: 'Order not found'
-            });
-        }
 
         res.status(200).json({
             status: 'success',

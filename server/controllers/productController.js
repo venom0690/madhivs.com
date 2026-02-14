@@ -22,6 +22,8 @@ function slugify(text) {
 /**
  * Get all products
  * GET /api/products
+ * FIX #2: SQL injection prevention (validate integer category IDs)
+ * FIX #11: Pagination support
  */
 exports.getAllProducts = async (req, res) => {
     try {
@@ -39,50 +41,100 @@ exports.getAllProducts = async (req, res) => {
         } = req.query;
 
         let query = 'SELECT * FROM products WHERE 1=1';
+        let countQuery = 'SELECT COUNT(*) as total FROM products WHERE 1=1';
         const params = [];
+        const countParams = [];
 
+        // FIX #2: Validate category ID is numeric before using
         if (category) {
-            query += ' AND category_id = ?';
-            params.push(category);
+            const categoryIdNum = parseInt(category);
+            if (isNaN(categoryIdNum) || categoryIdNum < 1) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'Invalid category ID'
+                });
+            }
+
+            const categoryIds = await getCategoryWithDescendants(categoryIdNum);
+
+            // FIX #2: Validate all returned IDs are safe integers
+            const validIds = categoryIds.filter(id => Number.isInteger(id) && id > 0);
+
+            if (validIds.length > 0) {
+                const placeholders = validIds.map(() => '?').join(',');
+                const clause = ` AND (category_id IN (${placeholders}) OR subcategory_id IN (${placeholders}))`;
+                query += clause;
+                countQuery += clause;
+                params.push(...validIds, ...validIds);
+                countParams.push(...validIds, ...validIds);
+            } else {
+                query += ' AND 1=0';
+                countQuery += ' AND 1=0';
+            }
         }
 
         if (subcategory) {
+            const subIdNum = parseInt(subcategory);
+            if (isNaN(subIdNum) || subIdNum < 1) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'Invalid subcategory ID'
+                });
+            }
             query += ' AND subcategory_id = ?';
-            params.push(subcategory);
+            countQuery += ' AND subcategory_id = ?';
+            params.push(subIdNum);
+            countParams.push(subIdNum);
         }
 
         if (trending === 'true') {
             query += ' AND is_trending = 1';
+            countQuery += ' AND is_trending = 1';
         }
 
         if (popular === 'true') {
             query += ' AND is_popular = 1';
+            countQuery += ' AND is_popular = 1';
         }
 
         if (featured === 'true') {
             query += ' AND is_featured = 1';
+            countQuery += ' AND is_featured = 1';
         }
 
         if (men === 'true') {
             query += ' AND is_men_collection = 1';
+            countQuery += ' AND is_men_collection = 1';
         }
 
         if (women === 'true') {
             query += ' AND is_women_collection = 1';
+            countQuery += ' AND is_women_collection = 1';
         }
 
         if (search) {
+            // Limit search term length to prevent abuse
+            const sanitizedSearch = search.toString().substring(0, 200);
             query += ' AND (name LIKE ? OR description LIKE ?)';
-            const searchTerm = `%${search}%`;
+            countQuery += ' AND (name LIKE ? OR description LIKE ?)';
+            const searchTerm = `%${sanitizedSearch}%`;
             params.push(searchTerm, searchTerm);
+            countParams.push(searchTerm, searchTerm);
         }
 
         query += ' ORDER BY created_at DESC';
 
-        if (limit) {
-            query += ' LIMIT ?';
-            params.push(parseInt(limit));
-        }
+        // FIX #11: Pagination
+        const pageNum = Math.max(1, parseInt(page) || 1);
+        const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 20)); // Cap at 100
+        const offset = (pageNum - 1) * limitNum;
+
+        // Get total count for pagination metadata
+        const [countResult] = await db.query(countQuery, countParams);
+        const total = countResult[0].total;
+
+        query += ' LIMIT ? OFFSET ?';
+        params.push(limitNum, offset);
 
         const [products] = await db.query(query, params);
 
@@ -97,6 +149,9 @@ exports.getAllProducts = async (req, res) => {
         res.status(200).json({
             status: 'success',
             results: parsedProducts.length,
+            total,
+            page: pageNum,
+            totalPages: Math.ceil(total / limitNum),
             products: parsedProducts
         });
 
@@ -108,6 +163,43 @@ exports.getAllProducts = async (req, res) => {
         });
     }
 };
+
+/**
+ * Get category ID and all its descendant IDs
+ * Used for hierarchical product filtering
+ * FIX #1: Added depth limit + visited set to prevent infinite recursion
+ */
+async function getCategoryWithDescendants(categoryId, maxDepth = 20) {
+    const ids = [parseInt(categoryId)];
+    const visited = new Set();
+
+    async function findChildren(parentId, currentDepth) {
+        if (currentDepth > maxDepth) {
+            console.warn(`Max depth ${maxDepth} reached in product filter`);
+            return;
+        }
+
+        if (visited.has(parentId)) {
+            console.warn(`Circular reference detected at category ${parentId}`);
+            return;
+        }
+
+        visited.add(parentId);
+
+        const [children] = await db.query(
+            'SELECT id FROM categories WHERE parent_id = ?',
+            [parentId]
+        );
+
+        for (const child of children) {
+            ids.push(child.id);
+            await findChildren(child.id, currentDepth + 1);
+        }
+    }
+
+    await findChildren(categoryId, 0);
+    return ids;
+}
 
 /**
  * Get single product
@@ -193,12 +285,45 @@ exports.createProduct = async (req, res) => {
             seo_description
         } = req.body;
 
-        // Basic validation
-        if (!name || !price || !category_id || !primary_image) {
+        // Input validation
+        if (!name || typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 200) {
             return res.status(400).json({
                 status: 'error',
-                message: 'Name, price, category, and primary image are required'
+                message: 'Product name is required (2-200 characters)'
             });
+        }
+
+        const priceNum = parseFloat(price);
+        if (!price || isNaN(priceNum) || priceNum <= 0) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Valid price is required'
+            });
+        }
+
+        if (!category_id) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Category is required'
+            });
+        }
+
+        if (!primary_image) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Primary image is required'
+            });
+        }
+
+        // Validate discount price if provided
+        if (discount_price !== undefined && discount_price !== null) {
+            const discountNum = parseFloat(discount_price);
+            if (isNaN(discountNum) || discountNum < 0 || discountNum >= priceNum) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'Discount price must be less than original price'
+                });
+            }
         }
 
         // Validate subcategory belongs to category if provided
@@ -219,10 +344,10 @@ exports.createProduct = async (req, res) => {
         // Generate slug
         const slug = slugify(name);
 
-        // Convert arrays to JSON
-        const imagesJson = JSON.stringify(images || []);
-        const sizesJson = JSON.stringify(sizes || []);
-        const colorsJson = JSON.stringify(colors || []);
+        // Convert arrays to JSON safely
+        const imagesJson = JSON.stringify(Array.isArray(images) ? images : []);
+        const sizesJson = JSON.stringify(Array.isArray(sizes) ? sizes : []);
+        const colorsJson = JSON.stringify(Array.isArray(colors) ? colors : []);
 
         // Insert product
         const [result] = await db.query(
@@ -233,7 +358,8 @@ exports.createProduct = async (req, res) => {
                 seo_title, seo_description
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-                name, slug, description || null, price, discount_price || null, category_id, subcategory_id || null, stock || 0,
+                name.trim(), slug, description || null, priceNum, discount_price || null,
+                category_id, subcategory_id || null, parseInt(stock) || 0,
                 primary_image, imagesJson, sizesJson, colorsJson,
                 is_trending ? 1 : 0, is_popular ? 1 : 0, is_featured ? 1 : 0,
                 is_men_collection ? 1 : 0, is_women_collection ? 1 : 0,
@@ -323,8 +449,25 @@ exports.updateProduct = async (req, res) => {
         for (const field of allowedFields) {
             if (req.body[field] !== undefined) {
                 if (field === 'name') {
+                    const trimmedName = req.body[field].toString().trim();
+                    if (trimmedName.length < 2 || trimmedName.length > 200) {
+                        return res.status(400).json({
+                            status: 'error',
+                            message: 'Product name must be 2-200 characters'
+                        });
+                    }
                     updates.push('name = ?', 'slug = ?');
-                    params.push(req.body[field], slugify(req.body[field]));
+                    params.push(trimmedName, slugify(trimmedName));
+                } else if (field === 'price') {
+                    const priceNum = parseFloat(req.body[field]);
+                    if (isNaN(priceNum) || priceNum <= 0) {
+                        return res.status(400).json({
+                            status: 'error',
+                            message: 'Price must be a positive number'
+                        });
+                    }
+                    updates.push('price = ?');
+                    params.push(priceNum);
                 } else if (field.startsWith('is_')) {
                     updates.push(`${field} = ?`);
                     params.push(req.body[field] ? 1 : 0);
@@ -338,15 +481,15 @@ exports.updateProduct = async (req, res) => {
         // Handle JSON fields
         if (req.body.images !== undefined) {
             updates.push('images = ?');
-            params.push(JSON.stringify(req.body.images));
+            params.push(JSON.stringify(Array.isArray(req.body.images) ? req.body.images : []));
         }
         if (req.body.sizes !== undefined) {
             updates.push('sizes = ?');
-            params.push(JSON.stringify(req.body.sizes));
+            params.push(JSON.stringify(Array.isArray(req.body.sizes) ? req.body.sizes : []));
         }
         if (req.body.colors !== undefined) {
             updates.push('colors = ?');
-            params.push(JSON.stringify(req.body.colors));
+            params.push(JSON.stringify(Array.isArray(req.body.colors) ? req.body.colors : []));
         }
 
         if (updates.length === 0) {
@@ -377,9 +520,10 @@ exports.updateProduct = async (req, res) => {
         }
 
         const product = products[0];
-        product.images = JSON.parse(product.images);
-        product.sizes = JSON.parse(product.sizes);
-        product.colors = JSON.parse(product.colors);
+        // FIX: Use safeJsonParse instead of raw JSON.parse (crash prevention)
+        product.images = safeJsonParse(product.images);
+        product.sizes = safeJsonParse(product.sizes);
+        product.colors = safeJsonParse(product.colors);
 
         res.status(200).json({
             status: 'success',
@@ -421,9 +565,9 @@ exports.deleteProduct = async (req, res) => {
 
         // Try to delete image files (don't fail if file deletion fails)
         try {
-            const images = product.images ? JSON.parse(product.images) : [];
+            const images = safeJsonParse(product.images, []);
             for (const imagePath of images) {
-                if (imagePath && imagePath.startsWith('/uploads/')) {
+                if (imagePath && typeof imagePath === 'string' && imagePath.startsWith('/uploads/') && !imagePath.includes('..')) {
                     const filePath = path.join(__dirname, '..', imagePath);
                     await fs.unlink(filePath).catch(() => { });
                 }

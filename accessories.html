@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Accessories Collection - Bags, Jewelry, and Fashion Accessories">
+    <title>Accessories Collection - Maadhivs Boutique</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <header class="navbar">
+        <!-- Left -->
+        <div class="nav-left">
+            <span class="hamburger">&#9776;</span>
+            <nav class="nav-links">
+                <div class="nav-item">
+                    <a>CATEGORIES</a>
+                    <div class="dropdown-menu">
+                        <a href="men.html">Men</a>
+                        <a href="women.html">Women</a>
+                        <a href="accessories.html">Accessories</a>
+                    </div>
+                </div>
+                <a href="services.html">SERVICES</a>
+                <a href="about.html">ABOUT</a>
+                <a href="contact.html">CONTACT</a>
+            </nav>
+        </div>
+
+        <!-- Center -->
+        <div class="nav-logo">
+            <a href="index.html" style="text-decoration: none; color: inherit;">Maadhivs Boutique</a>
+        </div>
+        <div class="nav-right">
+            <div class="search-box">
+                <input type="text" placeholder="What are you looking for?" />
+                <span class="search-icon">🔍</span>
+            </div>
+            <a href="wishlist.html" class="icon wishlist-link"
+                style="font-family: Arial, sans-serif; font-size: 1.5rem; font-weight: 600;">
+
+                wishlist
+                <span class="wishlist-count">0</span>
+            </a>
+            <span class="icon"></span>
+            <a href="cart.html" class="icon">🛒</a>
+        </div>
+    </header>
+
+    <!-- Products Section -->
+    <section class="section">
+        <div class="section-header">
+            <h1 class="section-title">Accessories Collection</h1>
+            <p class="section-subtitle">Complete your look with our curated accessories</p>
+        </div>
+
+        <!-- Filter Buttons -->
+        <div class="filter-buttons" id="filterButtons">
+            <button class="filter-btn active" data-category="all">All</button>
+            <!-- Dynamic filters will be loaded here -->
+        </div>
+
+        <!-- Product Grid -->
+        <div class="product-grid" id="productGrid">
+            <!-- Products will be dynamically loaded from API -->
+            <!-- Fallback products shown below if API fails -->
+
+            <a href="product.html?name=Leather Handbag&price=3999&image=https://images.unsplash.com/photo-1584917865442-de89df76afd3"
+                class="product-card" data-category="bags">
+                <div class="product-images">
+                    <button class="wishlist-heart" data-product-name="Leather Handbag" data-product-price="₹3,999"
+                        data-product-image="https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600&q=80"
+                        data-product-link="product.html?name=Leather Handbag&price=3999&image=https://images.unsplash.com/photo-1584917865442-de89df76afd3">
+                        ❤️
+                    </button>
+                    <img class="main-image"
+                        src="https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600&q=80"
+                        alt="Leather Handbag">
+                </div>
+                <div class="product-info">
+                    <h3 class="product-name">Leather Handbag</h3>
+                    <p class="product-price">₹3,999</p>
+                </div>
+            </a>
+
+            <a href="product.html?name=Statement Necklace&price=1499&image=https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f"
+                class="product-card" data-category="jewelry">
+                <div class="product-images">
+                    <button class="wishlist-heart" data-product-name="Statement Necklace" data-product-price="₹1,499"
+                        data-product-image="https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80"
+                        data-product-link="product.html?name=Statement Necklace&price=1499&image=https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f">
+                        ❤️
+                    </button>
+                    <img class="main-image"
+                        src="https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80"
+                        alt="Statement Necklace">
+                </div>
+                <div class="product-info">
+                    <h3 class="product-name">Statement Necklace</h3>
+                    <p class="product-price">₹1,499</p>
+                </div>
+            </a>
+
+            <a href="product.html?name=Designer Sunglasses&price=2499&image=https://images.unsplash.com/photo-1511499767150-a48a237f0083"
+                class="product-card" data-category="sunglasses">
+                <div class="product-images">
+                    <button class="wishlist-heart" data-product-name="Designer Sunglasses" data-product-price="₹2,499"
+                        data-product-image="https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&q=80"
+                        data-product-link="product.html?name=Designer Sunglasses&price=2499&image=https://images.unsplash.com/photo-1511499767150-a48a237f0083">
+                        ❤️
+                    </button>
+                    <img class="main-image"
+                        src="https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&q=80"
+                        alt="Designer Sunglasses">
+                </div>
+                <div class="product-info">
+                    <h3 class="product-name">Designer Sunglasses</h3>
+                    <p class="product-price">₹2,499</p>
+                </div>
+            </a>
+
+            <a href="product.html?name=Silk Scarf&price=899&image=https://images.unsplash.com/photo-1601924994987-69e26d50dc26"
+                class="product-card" data-category="scarves">
+                <div class="product-images">
+                    <button class="wishlist-heart" data-product-name="Silk Scarf" data-product-price="₹899"
+                        data-product-image="https://images.unsplash.com/photo-1601924994987-69e26d50dc26?w=600&q=80"
+                        data-product-link="product.html?name=Silk Scarf&price=899&image=https://images.unsplash.com/photo-1601924994987-69e26d50dc26">
+                        ❤️
+                    </button>
+                    <img class="main-image"
+                        src="https://images.unsplash.com/photo-1601924994987-69e26d50dc26?w=600&q=80" alt="Silk Scarf">
+                </div>
+                <div class="product-info">
+                    <h3 class="product-name">Silk Scarf</h3>
+                    <p class="product-price">₹899</p>
+                </div>
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-logo">Maadhivs Boutique</div>
+            <p class="footer-text">Premium Indian Ethnic Wear</p>
+            <p class="footer-text">&copy; 2026 Maadhivs Boutique. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="js/wishlist.js"></script>
+    <script src="js/search.js"></script>
+    <script src="js/hamburger.js"></script>
+    <script>
+        // Filter functionality
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        const productCards = document.querySelectorAll('.product-card');
+
+        filterButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // Remove active class from all buttons
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                // Add active class to clicked button
+                button.classList.add('active');
+
+                const category = button.getAttribute('data-category');
+
+                // Filter products
+                productCards.forEach(card => {
+                    if (category === 'all' || card.getAttribute('data-category') === category) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

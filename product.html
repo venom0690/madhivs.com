@@ -16,8 +16,14 @@
         <div class="nav-left">
             <span class="hamburger">&#9776;</span>
             <nav class="nav-links">
-                <a href="men.html" class="active">MEN</a>
-                <a href="women.html" class="active1">WOMEN</a>
+                <div class="nav-item">
+                    <a>CATEGORIES</a>
+                    <div class="dropdown-menu">
+                        <a href="men.html">Men</a>
+                        <a href="women.html">Women</a>
+                        <a href="accessories.html">Accessories</a>
+                    </div>
+                </div>
                 <a href="services.html">SERVICES</a>
                 <a href="about.html">ABOUT</a>
                 <a href="contact.html">CONTACT</a>
@@ -61,7 +67,9 @@
 
             <!-- Product Information -->
             <div class="product-detail-info">
-                <p id="productCategory" style="color: var(--color-text-light); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;"></p>
+                <p id="productCategory"
+                    style="color: var(--color-text-light); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;">
+                </p>
                 <h1 id="productName" class="product-detail-title">Product Name</h1>
                 <p id="productPrice" class="product-detail-price">₹0</p>
 

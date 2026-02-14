@@ -2,9 +2,15 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
 
+// FIX #16: Email validation helper
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 /**
  * Admin Login
  * POST /api/admin/login
+ * FIX #7: Timing attack prevention (always hash even if user not found)
  */
 exports.login = async (req, res) => {
     try {
@@ -18,25 +24,30 @@ exports.login = async (req, res) => {
             });
         }
 
-        // Find admin by email
-        const [admins] = await db.query(
-            'SELECT * FROM admins WHERE email = ?',
-            [email]
-        );
-
-        if (admins.length === 0) {
-            return res.status(401).json({
+        // FIX #16: Email format validation
+        if (!isValidEmail(email)) {
+            return res.status(400).json({
                 status: 'error',
-                message: 'Invalid email or password'
+                message: 'Invalid email format'
             });
         }
 
-        const admin = admins[0];
+        // Find admin by email
+        const [admins] = await db.query(
+            'SELECT * FROM admins WHERE email = ?',
+            [email.trim().toLowerCase()]
+        );
 
-        // Check password
-        const isPasswordValid = await bcrypt.compare(password, admin.password);
+        // FIX #7: Always run bcrypt.compare to prevent timing attacks
+        // If user not found, compare against a dummy hash so response time is identical
+        const dummyHash = '$2a$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ01234';
+        const admin = admins.length > 0 ? admins[0] : null;
+        const hashToCheck = admin ? admin.password : dummyHash;
 
-        if (!isPasswordValid) {
+        const isPasswordValid = await bcrypt.compare(password, hashToCheck);
+
+        // Same error response whether user exists or not
+        if (!admin || !isPasswordValid) {
             return res.status(401).json({
                 status: 'error',
                 message: 'Invalid email or password'
