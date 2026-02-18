@@ -8,10 +8,30 @@ const dataService = (function () {
     'use strict';
 
     const API_BASE = window.location.origin + '/api';
+    let csrfToken = null;
+
+    /**
+     * Get CSRF token from server
+     */
+    async function getCsrfToken() {
+        if (csrfToken) return csrfToken;
+        
+        try {
+            const response = await fetch(`${API_BASE}/csrf-token`);
+            const data = await response.json();
+            csrfToken = data.csrfToken;
+            return csrfToken;
+        } catch (error) {
+            console.error('Failed to get CSRF token:', error);
+            return null;
+        }
+    }
 
     /**
      * Internal request helper
      * Adds auth token and handles response parsing
+     * FIX: Added 401 response interceptor to redirect to login on token expiration
+     * FIX: Added CSRF token for state-changing requests
      */
     async function _request(endpoint, options = {}) {
         const token = localStorage.getItem('adminToken');
@@ -19,6 +39,14 @@ const dataService = (function () {
 
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        // Add CSRF token for state-changing requests
+        if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method)) {
+            const csrf = await getCsrfToken();
+            if (csrf) {
+                headers['X-CSRF-Token'] = csrf;
+            }
         }
 
         // Only set Content-Type for non-FormData requests
@@ -31,9 +59,23 @@ const dataService = (function () {
             headers
         });
 
+        // FIX: Handle 401 Unauthorized - token expired or invalid
+        if (response.status === 401) {
+            console.warn('Authentication failed - redirecting to login');
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('admin_user');
+            window.location.href = 'index.html';
+            throw new Error('Session expired. Please log in again.');
+        }
+
         const data = await response.json();
 
         if (!response.ok) {
+            // If CSRF token is invalid, refresh it and retry once
+            if (response.status === 403 && data.message && data.message.includes('CSRF')) {
+                csrfToken = null; // Clear cached token
+                // Don't retry automatically to avoid infinite loops
+            }
             throw new Error(data.message || `Request failed (${response.status})`);
         }
 
@@ -240,6 +282,50 @@ const dataService = (function () {
     }
 
     // ==========================================
+    // CONTENT (Homepage & Keywords)
+    // ==========================================
+
+    async function getHomepageContent() {
+        const result = await _request('/content/homepage');
+        return result.data;
+    }
+
+    async function updateHomepageContent(config) {
+        const result = await _request('/content/homepage', {
+            method: 'PUT',
+            body: JSON.stringify(config)
+        });
+        return result.data;
+    }
+
+    async function getKeywords() {
+        const result = await _request('/content/keywords');
+        return result.data;
+    }
+
+    async function createKeyword(data) {
+        const result = await _request('/content/keywords', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+        return result.data;
+    }
+
+    async function updateKeyword(id, data) {
+        const result = await _request(`/content/keywords/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        });
+        return result.data;
+    }
+
+    async function deleteKeyword(id) {
+        return await _request(`/content/keywords/${id}`, {
+            method: 'DELETE'
+        });
+    }
+
+    // ==========================================
     // STATISTICS (computed from existing endpoints)
     // ==========================================
 
@@ -300,6 +386,14 @@ const dataService = (function () {
 
         // Upload
         uploadImage,
+
+        // Content
+        getHomepageContent,
+        updateHomepageContent,
+        getKeywords,
+        createKeyword,
+        updateKeyword,
+        deleteKeyword,
 
         // Statistics
         getStatistics

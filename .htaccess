@@ -1,41 +1,443 @@
-RewriteEngine On
+# ============================================
+# Maadhivs Boutique - Apache Configuration
+# ============================================
+# Comprehensive .htaccess for security, performance, and SEO
+# Last Updated: February 18, 2026
+# ============================================
 
-✅ Remove .html extension
+# ============================================
+# 1. SECURITY HEADERS
+# ============================================
 
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_FILENAME}.html -f
-RewriteRule ^([^.]+)$ $1.html [NC,L]
+<IfModule mod_headers.c>
+    # Prevent MIME type sniffing
+    Header set X-Content-Type-Options "nosniff"
+    
+    # Prevent clickjacking
+    Header set X-Frame-Options "SAMEORIGIN"
+    
+    # Enable XSS protection
+    Header set X-XSS-Protection "1; mode=block"
+    
+    # Referrer policy
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    
+    # Permissions policy (disable unnecessary features)
+    Header set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
+    
+    # Remove server signature
+    Header unset Server
+    Header unset X-Powered-By
+    
+    # HSTS (HTTP Strict Transport Security) - Enable after SSL is configured
+    # Uncomment the line below after SSL certificate is installed
+    # Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    
+    # Content Security Policy (CSP)
+    # Adjust based on your needs
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: http:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; frame-src 'none'; object-src 'none';"
+</IfModule>
 
-✅ Hide .html from URL
+# ============================================
+# 2. FORCE HTTPS (Enable after SSL is configured)
+# ============================================
 
-RewriteCond %{THE_REQUEST} \s/([^.]+).html [NC]
-RewriteRule ^ /%1 [NC,L,R=301]
+# Uncomment the lines below after SSL certificate is installed
+# <IfModule mod_rewrite.c>
+#     RewriteEngine On
+#     RewriteCond %{HTTPS} off
+#     RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# </IfModule>
 
-✅ Disable directory browsing
+# ============================================
+# 3. PROTECT SENSITIVE FILES
+# ============================================
+
+# Deny access to .env files
+<FilesMatch "^\.env">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Deny access to .git directory
+<DirectoryMatch "\.git">
+    Order allow,deny
+    Deny from all
+</DirectoryMatch>
+
+# Deny access to node_modules
+<DirectoryMatch "node_modules">
+    Order allow,deny
+    Deny from all
+</DirectoryMatch>
+
+# Deny access to package files
+<FilesMatch "(package\.json|package-lock\.json|composer\.json|composer\.lock)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Deny access to markdown documentation (optional - remove if you want docs public)
+<FilesMatch "\.(md|markdown)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Deny access to SQL files
+<FilesMatch "\.sql$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Deny access to log files
+<FilesMatch "\.(log|txt)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Protect .htaccess itself
+<Files .htaccess>
+    Order allow,deny
+    Deny from all
+</Files>
+
+# ============================================
+# 4. DISABLE DIRECTORY BROWSING
+# ============================================
 
 Options -Indexes
 
-✅ Protect sensitive files
+# ============================================
+# 5. CUSTOM ERROR PAGES
+# ============================================
 
-<FilesMatch "(.env|.log|composer.json|package.json|package-lock.json)">
-Order allow,deny
-Deny from all
-</FilesMatch>
+ErrorDocument 400 /error.html
+ErrorDocument 401 /error.html
+ErrorDocument 403 /error.html
+ErrorDocument 404 /error.html
+ErrorDocument 500 /error.html
+ErrorDocument 503 /error.html
 
-✅ Block access to server folders
+# ============================================
+# 6. COMPRESSION (GZIP)
+# ============================================
 
-RewriteRule ^(server|config|db|uploads/private) - [F,L]
+<IfModule mod_deflate.c>
+    # Compress HTML, CSS, JavaScript, Text, XML and fonts
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/vnd.ms-fontobject
+    AddOutputFilterByType DEFLATE application/x-font
+    AddOutputFilterByType DEFLATE application/x-font-opentype
+    AddOutputFilterByType DEFLATE application/x-font-otf
+    AddOutputFilterByType DEFLATE application/x-font-truetype
+    AddOutputFilterByType DEFLATE application/x-font-ttf
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE font/opentype
+    AddOutputFilterByType DEFLATE font/otf
+    AddOutputFilterByType DEFLATE font/ttf
+    AddOutputFilterByType DEFLATE image/svg+xml
+    AddOutputFilterByType DEFLATE image/x-icon
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/javascript
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/xml
+    
+    # Remove browser bugs (only needed for really old browsers)
+    BrowserMatch ^Mozilla/4 gzip-only-text/html
+    BrowserMatch ^Mozilla/4\.0[678] no-gzip
+    BrowserMatch \bMSIE !no-gzip !gzip-only-text/html
+    Header append Vary User-Agent
+</IfModule>
 
-✅ Protect SQL files
+# ============================================
+# 7. BROWSER CACHING
+# ============================================
 
-<FilesMatch ".(sql|bak)$">
-Order allow,deny
-Deny from all
-</FilesMatch>
+<IfModule mod_expires.c>
+    ExpiresActive On
+    
+    # Default expiration: 1 hour
+    ExpiresDefault "access plus 1 hour"
+    
+    # HTML: 1 hour
+    ExpiresByType text/html "access plus 1 hour"
+    
+    # CSS and JavaScript: 1 week
+    ExpiresByType text/css "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+    ExpiresByType application/x-javascript "access plus 1 week"
+    
+    # Images: 1 month
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/jpg "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/webp "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType image/x-icon "access plus 1 month"
+    
+    # Fonts: 1 year
+    ExpiresByType font/ttf "access plus 1 year"
+    ExpiresByType font/otf "access plus 1 year"
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType application/font-woff "access plus 1 year"
+    
+    # Media: 1 month
+    ExpiresByType audio/ogg "access plus 1 month"
+    ExpiresByType video/mp4 "access plus 1 month"
+    ExpiresByType video/ogg "access plus 1 month"
+    ExpiresByType video/webm "access plus 1 month"
+</IfModule>
 
-✅ Hide .htaccess itself
+# Cache-Control Headers
+<IfModule mod_headers.c>
+    # 1 WEEK - CSS and JavaScript
+    <FilesMatch "\.(css|js)$">
+        Header set Cache-Control "max-age=604800, public"
+    </FilesMatch>
+    
+    # 1 MONTH - Images
+    <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|ico)$">
+        Header set Cache-Control "max-age=2592000, public"
+    </FilesMatch>
+    
+    # 1 YEAR - Fonts
+    <FilesMatch "\.(ttf|otf|woff|woff2|eot)$">
+        Header set Cache-Control "max-age=31536000, public"
+    </FilesMatch>
+    
+    # 1 HOUR - HTML
+    <FilesMatch "\.(html|htm)$">
+        Header set Cache-Control "max-age=3600, public, must-revalidate"
+    </FilesMatch>
+</IfModule>
 
-<Files .htaccess>
-Order allow,deny
-Deny from all
-</Files>
+# ============================================
+# 8. URL REWRITING (SPA Support)
+# ============================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    
+    # Redirect www to non-www (or vice versa)
+    # Uncomment ONE of the following based on your preference:
+    
+    # Option 1: Redirect www to non-www
+    # RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+    # RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
+    
+    # Option 2: Redirect non-www to www
+    # RewriteCond %{HTTP_HOST} !^www\. [NC]
+    # RewriteRule ^(.*)$ https://www.%{HTTP_HOST}/$1 [R=301,L]
+    
+    # Protect server directory from direct access
+    RewriteRule ^server/ - [F,L]
+    
+    # API requests should go to Node.js backend (if using Apache as reverse proxy)
+    # Uncomment if you're using Apache as reverse proxy to Node.js
+    # RewriteCond %{REQUEST_URI} ^/api/
+    # RewriteRule ^(.*)$ http://localhost:5000/$1 [P,L]
+    
+    # Don't rewrite files or directories that exist
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    
+    # Don't rewrite API calls
+    RewriteCond %{REQUEST_URI} !^/api/
+    
+    # Don't rewrite uploads
+    RewriteCond %{REQUEST_URI} !^/uploads/
+    
+    # Rewrite everything else to index.html (SPA support)
+    # Comment this out if you're NOT using a SPA framework
+    # RewriteRule ^(.*)$ /index.html [L]
+</IfModule>
+
+# ============================================
+# 9. MIME TYPES
+# ============================================
+
+<IfModule mod_mime.c>
+    # JavaScript
+    AddType application/javascript js
+    AddType application/json json
+    
+    # Images
+    AddType image/webp webp
+    AddType image/svg+xml svg svgz
+    
+    # Fonts
+    AddType font/ttf ttf
+    AddType font/otf otf
+    AddType font/woff woff
+    AddType font/woff2 woff2
+    AddType application/vnd.ms-fontobject eot
+    
+    # Video
+    AddType video/mp4 mp4
+    AddType video/webm webm
+    AddType video/ogg ogv
+    
+    # Audio
+    AddType audio/mp3 mp3
+    AddType audio/ogg ogg
+    AddType audio/wav wav
+</IfModule>
+
+# ============================================
+# 10. CHARACTER ENCODING
+# ============================================
+
+AddDefaultCharset UTF-8
+<IfModule mod_mime.c>
+    AddCharset UTF-8 .html .css .js .xml .json .rss .atom
+</IfModule>
+
+# ============================================
+# 11. PREVENT HOTLINKING (Bandwidth Theft)
+# ============================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Allow empty referrer (direct access)
+    RewriteCond %{HTTP_REFERER} !^$
+    
+    # Allow your own domain
+    RewriteCond %{HTTP_REFERER} !^https?://(www\.)?yourdomain\.com [NC]
+    
+    # Block hotlinking of images
+    RewriteCond %{REQUEST_URI} \.(jpg|jpeg|png|gif|webp|svg)$ [NC]
+    RewriteRule .* - [F,L]
+</IfModule>
+
+# ============================================
+# 12. LIMIT FILE UPLOAD SIZE
+# ============================================
+
+# Limit upload size to 10MB (adjust as needed)
+php_value upload_max_filesize 10M
+php_value post_max_size 10M
+
+# ============================================
+# 13. PREVENT SQL INJECTION (Basic Protection)
+# ============================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Block SQL injection attempts in query strings
+    RewriteCond %{QUERY_STRING} (\<|%3C).*script.*(\>|%3E) [NC,OR]
+    RewriteCond %{QUERY_STRING} GLOBALS(=|\[|\%[0-9A-Z]{0,2}) [OR]
+    RewriteCond %{QUERY_STRING} _REQUEST(=|\[|\%[0-9A-Z]{0,2}) [OR]
+    RewriteCond %{QUERY_STRING} (\<|%3C).*iframe.*(\>|%3E) [NC,OR]
+    RewriteCond %{QUERY_STRING} union.*select.*\( [NC,OR]
+    RewriteCond %{QUERY_STRING} union.*all.*select.* [NC,OR]
+    RewriteCond %{QUERY_STRING} concat.*\( [NC]
+    RewriteRule ^(.*)$ - [F,L]
+</IfModule>
+
+# ============================================
+# 14. CORS (Cross-Origin Resource Sharing)
+# ============================================
+
+# Uncomment if you need CORS for API access from other domains
+# <IfModule mod_headers.c>
+#     Header set Access-Control-Allow-Origin "*"
+#     Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+#     Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-CSRF-Token"
+# </IfModule>
+
+# ============================================
+# 15. PERFORMANCE OPTIMIZATIONS
+# ============================================
+
+# Enable Keep-Alive
+<IfModule mod_headers.c>
+    Header set Connection keep-alive
+</IfModule>
+
+# Disable ETags (use Cache-Control instead)
+<IfModule mod_headers.c>
+    Header unset ETag
+</IfModule>
+FileETag None
+
+# ============================================
+# 16. BLOCK BAD BOTS AND SCRAPERS
+# ============================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Block bad bots
+    RewriteCond %{HTTP_USER_AGENT} ^$ [OR]
+    RewriteCond %{HTTP_USER_AGENT} ^.*(bot|crawl|spider|scrape|harvest).*$ [NC]
+    RewriteCond %{HTTP_USER_AGENT} !^.*(google|bing|yahoo|duckduckgo).*$ [NC]
+    RewriteRule ^(.*)$ - [F,L]
+</IfModule>
+
+# ============================================
+# 17. RATE LIMITING (Basic)
+# ============================================
+
+# Note: For better rate limiting, use Node.js middleware
+# This is just basic Apache-level protection
+
+<IfModule mod_evasive.c>
+    DOSHashTableSize 3097
+    DOSPageCount 10
+    DOSSiteCount 100
+    DOSPageInterval 1
+    DOSSiteInterval 1
+    DOSBlockingPeriod 10
+</IfModule>
+
+# ============================================
+# 18. REDIRECT OLD URLS (SEO)
+# ============================================
+
+# Example redirects - adjust based on your needs
+# Redirect 301 /old-page.html /new-page.html
+# Redirect 301 /old-category/ /new-category/
+
+# ============================================
+# 19. CUSTOM PHP SETTINGS (if using PHP)
+# ============================================
+
+# Uncomment if you're using PHP
+# php_flag display_errors Off
+# php_flag log_errors On
+# php_value error_log /path/to/php-error.log
+# php_value max_execution_time 300
+# php_value memory_limit 256M
+
+# ============================================
+# 20. MAINTENANCE MODE
+# ============================================
+
+# Uncomment to enable maintenance mode
+# <IfModule mod_rewrite.c>
+#     RewriteEngine On
+#     RewriteCond %{REQUEST_URI} !^/maintenance\.html$
+#     RewriteCond %{REMOTE_ADDR} !^123\.456\.789\.000$
+#     RewriteRule ^(.*)$ /maintenance.html [R=503,L]
+# </IfModule>
+
+# ============================================
+# END OF CONFIGURATION
+# ============================================
+
+# Notes:
+# 1. Test thoroughly after enabling HTTPS redirects
+# 2. Adjust cache times based on your update frequency
+# 3. Update "yourdomain.com" with your actual domain
+# 4. Enable HSTS only after SSL is working properly
+# 5. Monitor server logs for any issues
+# 6. Some features require specific Apache modules to be enabled

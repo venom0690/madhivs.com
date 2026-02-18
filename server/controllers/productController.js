@@ -1,23 +1,8 @@
 const db = require('../db');
 const fs = require('fs').promises;
 const path = require('path');
-
-// Safe JSON parse — prevents server crash from malformed DB data
-function safeJsonParse(str, fallback = []) {
-    if (!str) return fallback;
-    try { return JSON.parse(str); } catch { return fallback; }
-}
-
-// Simple slugify function
-function slugify(text) {
-    return text
-        .toString()
-        .toLowerCase()
-        .trim()
-        .replace(/\s+/g, '-')
-        .replace(/[^\w\-]+/g, '')
-        .replace(/\-\-+/g, '-');
-}
+const { slugify, safeJsonParse } = require('../utils/helpers');
+const { validateText, sanitizeInput } = require('../utils/validators');
 
 /**
  * Get all products
@@ -293,6 +278,21 @@ exports.createProduct = async (req, res) => {
             });
         }
 
+        // Validate and sanitize description
+        if (description) {
+            const descValidation = validateText(description, 0, 5000);
+            if (!descValidation.valid) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: `Description: ${descValidation.error}`
+                });
+            }
+        }
+
+        // Sanitize text inputs
+        const sanitizedName = sanitizeInput(name);
+        const sanitizedDescription = description ? sanitizeInput(description) : null;
+
         const priceNum = parseFloat(price);
         if (!price || isNaN(priceNum) || priceNum <= 0) {
             return res.status(400).json({
@@ -342,7 +342,7 @@ exports.createProduct = async (req, res) => {
         }
 
         // Generate slug
-        const slug = slugify(name);
+        const slug = slugify(sanitizedName);
 
         // Convert arrays to JSON safely
         const imagesJson = JSON.stringify(Array.isArray(images) ? images : []);
@@ -358,7 +358,7 @@ exports.createProduct = async (req, res) => {
                 seo_title, seo_description
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-                name.trim(), slug, description || null, priceNum, discount_price || null,
+                sanitizedName, slug, sanitizedDescription, priceNum, discount_price || null,
                 category_id, subcategory_id || null, parseInt(stock) || 0,
                 primary_image, imagesJson, sizesJson, colorsJson,
                 is_trending ? 1 : 0, is_popular ? 1 : 0, is_featured ? 1 : 0,

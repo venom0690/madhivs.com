@@ -346,8 +346,12 @@
         displayOrderSummary();
 
         // Handle form submission
-        checkoutForm.addEventListener("submit", function (e) {
+        checkoutForm.addEventListener("submit", async function (e) {
             e.preventDefault();
+
+            // Disable button to prevent double submission
+            placeOrderBtn.disabled = true;
+            placeOrderBtn.textContent = 'Processing...';
 
             // Calculate total amount
             let totalAmount = 0;
@@ -355,63 +359,65 @@
                 totalAmount += item.price * item.quantity;
             });
 
-            // Generate unique order ID
-            const generateOrderId = () => {
-                return 'order_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            };
-
-            // Transform cart items to match Order model structure
+            // Transform cart items to match API structure
             const orderItems = cart.map(item => ({
-                productId: item.id || 'unknown',
+                product_id: item.id || item.productId,
+                id: item.id || item.productId,
                 name: item.name,
                 price: item.price,
                 quantity: item.quantity,
-                size: item.size
+                size: item.size || null,
+                color: item.color || null
             }));
 
-            // Create order object matching admin panel Order model
-            const order = {
-                id: generateOrderId(),
-                customerName: document.getElementById("fullName").value,
-                customerEmail: document.getElementById("email").value,
-                customerPhone: document.getElementById("phone").value,
+            // Create order object matching API structure
+            const orderData = {
+                customerInfo: {
+                    name: document.getElementById("fullName").value.trim(),
+                    email: document.getElementById("email").value.trim(),
+                    phone: document.getElementById("phone").value.trim()
+                },
                 items: orderItems,
-                totalAmount: totalAmount,
-                status: 'Pending',
                 shippingAddress: {
-                    street: document.getElementById("address").value,
-                    city: document.getElementById("city").value,
-                    state: document.getElementById("state").value,
-                    zip: document.getElementById("pincode").value,
+                    street: document.getElementById("address").value.trim(),
+                    city: document.getElementById("city").value.trim(),
+                    state: document.getElementById("state").value.trim(),
+                    pincode: document.getElementById("pincode").value.trim(),
                     country: 'India'
                 },
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                paymentMethod: 'cod', // Cash on Delivery
+                notes: null
             };
 
-            // Save order to admin_orders (shared key with admin panel)
             try {
-                // Get existing orders from admin_orders key
-                const existingOrders = JSON.parse(localStorage.getItem('admin_orders') || '[]');
+                // Send order to backend API
+                const response = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(orderData)
+                });
 
-                // Add new order
-                existingOrders.push(order);
+                const data = await response.json();
 
-                // Save back to localStorage
-                localStorage.setItem('admin_orders', JSON.stringify(existingOrders));
+                if (!response.ok) {
+                    throw new Error(data.message || 'Failed to create order');
+                }
 
-                // Also save as lastOrder for backward compatibility (if needed)
+                // Save order info for success page
                 localStorage.setItem('lastOrder', JSON.stringify({
-                    fullName: order.customerName,
-                    email: order.customerEmail,
-                    phone: order.customerPhone,
-                    address: order.shippingAddress.street,
-                    city: order.shippingAddress.city,
-                    pincode: order.shippingAddress.zip,
-                    state: order.shippingAddress.state,
+                    orderId: data.order.order_number || data.order.id,
+                    fullName: orderData.customerInfo.name,
+                    email: orderData.customerInfo.email,
+                    phone: orderData.customerInfo.phone,
+                    address: orderData.shippingAddress.street,
+                    city: orderData.shippingAddress.city,
+                    pincode: orderData.shippingAddress.pincode,
+                    state: orderData.shippingAddress.state,
                     cart: cart,
-                    orderDate: order.createdAt,
-                    orderId: order.id
+                    totalAmount: data.order.total_amount || totalAmount,
+                    orderDate: new Date().toISOString()
                 }));
 
                 // Clear cart
@@ -419,12 +425,18 @@
 
                 // Redirect to success page
                 window.location.href = "success.html";
+
             } catch (error) {
-                console.error('Error saving order:', error);
-                alert('There was an error placing your order. Please try again.');
+                console.error('Error placing order:', error);
+                alert('Error: ' + error.message + '\n\nPlease check your information and try again.');
+                
+                // Re-enable button
+                placeOrderBtn.disabled = false;
+                placeOrderBtn.textContent = 'Place Order';
             }
         });
     </script>
+    <script src="js/navbar-categories.js"></script>
 </body>
 
 </html>

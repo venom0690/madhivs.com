@@ -3,9 +3,11 @@ const multer = require('multer');
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const helmet = require('helmet');
 
 const db = require('./db');
 const { apiLimiter } = require('./middleware/rateLimiter');
+const { getCsrfToken } = require('./middleware/csrf');
 
 // Route imports
 const authRoutes = require('./routes/authRoutes');
@@ -13,9 +15,13 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const contentRoutes = require('./routes/contentRoutes');
 
 // Initialize express app
 const app = express();
+
+// Trust proxy (required for rate limiting behind Nginx/Cloudflare)
+app.set('trust proxy', 1);
 
 // SECURITY: Fail fast if JWT_SECRET is missing or too short
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
@@ -25,11 +31,36 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
 
 // Security headers
 app.disable('x-powered-by');
+
+// Use Helmet for security headers including CSP
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            scriptSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline needed for inline scripts
+            imgSrc: ["'self'", "data:", "https:", "http:"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            connectSrc: ["'self'"],
+            frameSrc: ["'none'"],
+            objectSrc: ["'none'"],
+            upgradeInsecureRequests: []
+        }
+    },
+    hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true
+    }
+}));
+
+// Additional security headers
 app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
     next();
 });
 
@@ -80,6 +111,10 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/content', contentRoutes);
+
+// CSRF token endpoint
+app.get('/api/csrf-token', getCsrfToken);
 
 // Health check endpoint (includes DB ping)
 app.get('/api/health', async (req, res) => {

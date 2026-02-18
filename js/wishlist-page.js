@@ -42,34 +42,54 @@ function loadAndDisplayWishlist() {
     });
 }
 
+// Helper to prevent XSS
+function escapeHtml(text) {
+    if (!text) return '';
+    return text
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 // Create a product card element for wishlist
 function createWishlistProductCard(product) {
     const card = document.createElement('div');
     card.className = 'product-card wishlist-item';
-    card.dataset.productName = product.name;
+
+    const safeName = escapeHtml(product.name);
+    // For JS data attributes, we might need simple escaping, but dataset handles it well usually. 
+    // However, for HTML attributes below, we definitely need escapeHtml.
+    card.dataset.productName = safeName;
+
+    const safePrice = escapeHtml(product.price);
+    const safeImage = escapeHtml(product.image);
+    const safeLink = escapeHtml(product.link);
 
     card.innerHTML = `
         <div class="product-images">
             <button class="wishlist-remove-btn" 
-                    data-product-name="${product.name}"
+                    data-product-name="${safeName}"
                     title="Remove from wishlist">
                 ✕
             </button>
             <img class="main-image" 
-                 src="${product.image}" 
-                 alt="${product.name}">
+                 src="${safeImage}" 
+                 alt="${safeName}">
         </div>
         <div class="product-info">
-            <h3 class="product-name">${product.name}</h3>
-            <p class="product-price">${product.price}</p>
+            <h3 class="product-name">${safeName}</h3>
+            <p class="product-price">${safePrice}</p>
             <div class="wishlist-actions">
                 <button class="btn btn-primary add-to-cart-btn" 
-                        data-product-name="${product.name}"
-                        data-product-price="${product.price}"
-                        data-product-image="${product.image}">
+                        data-product-name="${safeName}"
+                        data-product-price="${safePrice}"
+                        data-product-image="${safeImage}">
                     Add to Cart
                 </button>
-                <a href="${product.link}" class="btn btn-secondary">View Details</a>
+                <a href="${safeLink}" class="btn btn-secondary">View Details</a>
             </div>
         </div>
     `;

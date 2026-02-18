@@ -1,15 +1,5 @@
 const db = require('../db');
-
-// Simple slugify function
-function slugify(text) {
-    return text
-        .toString()
-        .toLowerCase()
-        .trim()
-        .replace(/\s+/g, '-')
-        .replace(/[^\w\-]+/g, '')
-        .replace(/\-\-+/g, '-');
-}
+const { slugify } = require('../utils/helpers');
 
 // Valid category types (matches ENUM in schema)
 const VALID_TYPES = ['Men', 'Women', 'General'];

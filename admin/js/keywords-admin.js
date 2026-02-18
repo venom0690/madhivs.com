@@ -1,12 +1,14 @@
 /**
  * Search Keywords Management Logic
+ * Fully Async/Await version
  */
 
-// Auth guard
-authService.requireAuth();
+// Auth guard - wrapped in async IIFE
+(async function initializePage() {
+    await authService.requireAuth();
 
-// Load user info
-const user = authService.getCurrentUser();
+    // Load user info
+    const user = authService.getCurrentUser();
 if (user) {
     document.getElementById('userName').textContent = user.email.split('@')[0];
 }
@@ -15,6 +17,10 @@ if (user) {
 document.getElementById('logoutBtn').addEventListener('click', () => {
     authService.logout();
 });
+
+// State
+let allProducts = [];
+let allCategories = [];
 
 // Modal elements
 const modal = document.getElementById('keywordModal');
@@ -39,14 +45,31 @@ modal.addEventListener('click', (e) => {
     }
 });
 
+// Initialize
+async function init() {
+    try {
+        const [products, categories] = await Promise.all([
+            dataService.getProducts(),
+            dataService.getCategories()
+        ]);
+
+        allProducts = products || [];
+        allCategories = categories || [];
+
+        loadKeywords();
+    } catch (error) {
+        console.error('Failed to load initial data:', error);
+    }
+}
+
 // Load products and categories into selects
 function loadSelects() {
-    const products = dataService.getProducts();
-    const categories = dataService.getCategories();
-
     // Load products
     linkedProductsSelect.innerHTML = '';
-    products.forEach(product => {
+    // Sort products by name
+    const sortedProducts = [...allProducts].sort((a, b) => a.name.localeCompare(b.name));
+
+    sortedProducts.forEach(product => {
         const option = document.createElement('option');
         option.value = product.id;
         option.textContent = product.name;
@@ -55,7 +78,7 @@ function loadSelects() {
 
     // Load categories
     linkedCategoriesSelect.innerHTML = '';
-    categories.forEach(category => {
+    allCategories.forEach(category => {
         const option = document.createElement('option');
         option.value = category.id;
         option.textContent = category.name;
@@ -83,14 +106,19 @@ function openEditModal(keyword) {
     loadSelects();
 
     // Select linked products
-    Array.from(linkedProductsSelect.options).forEach(option => {
-        option.selected = keyword.linkedProducts.includes(option.value);
-    });
+    if (keyword.linkedProducts) {
+        Array.from(linkedProductsSelect.options).forEach(option => {
+            // handle both string and number IDs equality
+            option.selected = keyword.linkedProducts.some(id => id == option.value);
+        });
+    }
 
     // Select linked categories
-    Array.from(linkedCategoriesSelect.options).forEach(option => {
-        option.selected = keyword.linkedCategories.includes(option.value);
-    });
+    if (keyword.linkedCategories) {
+        Array.from(linkedCategoriesSelect.options).forEach(option => {
+            option.selected = keyword.linkedCategories.some(id => id == option.value);
+        });
+    }
 
     formError.classList.remove('show');
     formError.textContent = '';
@@ -104,7 +132,11 @@ function closeModal() {
 }
 
 // Save keyword
-function saveKeyword() {
+async function saveKeyword() {
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
     const keywordId = keywordIdInput.value;
     const keywordText = keywordTextInput.value.trim().toLowerCase();
 
@@ -119,6 +151,8 @@ function saveKeyword() {
     // Validate
     if (!keywordText) {
         showError('Keyword is required');
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Keyword';
         return;
     }
 
@@ -131,16 +165,19 @@ function saveKeyword() {
 
         if (keywordId) {
             // Update existing keyword
-            dataService.updateKeyword(keywordId, keywordData);
+            await dataService.updateKeyword(keywordId, keywordData);
         } else {
             // Create new keyword
-            dataService.createKeyword(keywordData);
+            await dataService.createKeyword(keywordData);
         }
 
         closeModal();
-        loadKeywords();
+        await loadKeywords();
     } catch (error) {
         showError(error.message);
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Keyword';
     }
 }
 
@@ -151,108 +188,127 @@ function showError(message) {
 }
 
 // Delete keyword
-function deleteKeyword(id, keyword) {
+async function deleteKeyword(id, keyword) {
     if (!confirm(`Are you sure you want to delete keyword "${keyword}"?\n\nThis action cannot be undone.`)) {
         return;
     }
 
     try {
-        dataService.deleteKeyword(id);
-        loadKeywords();
+        await dataService.deleteKeyword(id);
+        await loadKeywords();
     } catch (error) {
         alert(error.message);
     }
 }
 
 // Load keywords table
-function loadKeywords() {
-    const keywords = dataService.getKeywords();
-    const products = dataService.getProducts();
-    const categories = dataService.getCategories();
+async function loadKeywords() {
     const container = document.getElementById('keywordsTableContainer');
 
-    if (keywords.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">🔍</div>
-                <div class="empty-state-text">No search keywords yet</div>
-                <button class="btn btn-primary mt-1" onclick="openAddModal()">Add Your First Keyword</button>
+    try {
+        const keywords = await dataService.getKeywords();
+
+        if (!keywords || keywords.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🔍</div>
+                    <div class="empty-state-text">No search keywords yet</div>
+                    <button class="btn btn-primary mt-1" onclick="openAddModal()">Add Your First Keyword</button>
+                </div>
+            `;
+            return;
+        }
+
+        const tableHTML = `
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Keyword</th>
+                            <th>Linked Products</th>
+                            <th>Linked Categories</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${keywords.map(keyword => {
+            // Get linked product names
+            const linkedIds = keyword.linkedProducts || [];
+            const linkedProductNames = linkedIds
+                .map(id => {
+                    const product = allProducts.find(p => p.id == id);
+                    return product ? product.name : null;
+                })
+                .filter(name => name !== null);
+
+            // Get linked category names
+            const linkedCatIds = keyword.linkedCategories || [];
+            const linkedCategoryNames = linkedCatIds
+                .map(id => {
+                    const category = allCategories.find(c => c.id == id);
+                    return category ? category.name : null;
+                })
+                .filter(name => name !== null);
+
+            // Safe stringify for onClick
+            const safeKeywordJson = JSON.stringify(keyword).replace(/"/g, '&quot;');
+
+            return `
+                                <tr>
+                                    <td><strong>"${keyword.keyword}"</strong></td>
+                                    <td>
+                                        ${linkedProductNames.length > 0
+                    ? linkedProductNames.map(name => `<span class="badge badge-primary" style="margin: 0.125rem;">${name}</span>`).join(' ')
+                    : '<span style="color: var(--text-muted);">None</span>'
+                }
+                                    </td>
+                                    <td>
+                                        ${linkedCategoryNames.length > 0
+                    ? linkedCategoryNames.map(name => `<span class="badge badge-success" style="margin: 0.125rem;">${name}</span>`).join(' ')
+                    : '<span style="color: var(--text-muted);">None</span>'
+                }
+                                    </td>
+                                    <td>${keyword.created_at ? new Date(keyword.created_at).toLocaleDateString() : 'N/A'}</td>
+                                    <td>
+                                        <div class="table-actions">
+                                            <button class="btn btn-secondary btn-sm" onclick='editKeyword(${safeKeywordJson})'>
+                                                Edit
+                                            </button>
+                                            <button class="btn btn-danger btn-sm" onclick='deleteKeyword("${keyword.id}", "${keyword.keyword}")'>
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+        }).join('')}
+                    </tbody>
+                </table>
             </div>
         `;
-        return;
+
+        container.innerHTML = tableHTML;
+    } catch (error) {
+        console.error('Error loading keywords:', error);
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">⚠️</div>
+                <div class="empty-state-text">Failed to load keywords</div>
+                <div>${error.message}</div>
+                <button class="btn btn-primary mt-1" onclick="loadKeywords()">Retry</button>
+            </div>
+        `;
     }
-
-    const tableHTML = `
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Keyword</th>
-                        <th>Linked Products</th>
-                        <th>Linked Categories</th>
-                        <th>Created</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${keywords.map(keyword => {
-        // Get linked product names
-        const linkedProductNames = keyword.linkedProducts
-            .map(id => {
-                const product = products.find(p => p.id === id);
-                return product ? product.name : null;
-            })
-            .filter(name => name !== null);
-
-        // Get linked category names
-        const linkedCategoryNames = keyword.linkedCategories
-            .map(id => {
-                const category = categories.find(c => c.id === id);
-                return category ? category.name : null;
-            })
-            .filter(name => name !== null);
-
-        return `
-                            <tr>
-                                <td><strong>"${keyword.keyword}"</strong></td>
-                                <td>
-                                    ${linkedProductNames.length > 0
-                ? linkedProductNames.map(name => `<span class="badge badge-primary" style="margin: 0.125rem;">${name}</span>`).join(' ')
-                : '<span style="color: var(--text-muted);">None</span>'
-            }
-                                </td>
-                                <td>
-                                    ${linkedCategoryNames.length > 0
-                ? linkedCategoryNames.map(name => `<span class="badge badge-success" style="margin: 0.125rem;">${name}</span>`).join(' ')
-                : '<span style="color: var(--text-muted);">None</span>'
-            }
-                                </td>
-                                <td>${new Date(keyword.createdAt).toLocaleDateString()}</td>
-                                <td>
-                                    <div class="table-actions">
-                                        <button class="btn btn-secondary btn-sm" onclick='editKeyword(${JSON.stringify(keyword).replace(/'/g, "&apos;")})'>
-                                            Edit
-                                        </button>
-                                        <button class="btn btn-danger btn-sm" onclick='deleteKeyword("${keyword.id}", "${keyword.keyword}")'>
-                                            Delete
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
-    }).join('')}
-                </tbody>
-            </table>
-        </div>
-    `;
-
-    container.innerHTML = tableHTML;
 }
 
 // Make functions globally accessible
 window.openAddModal = openAddModal;
 window.editKeyword = openEditModal;
 window.deleteKeyword = deleteKeyword;
+window.loadKeywords = loadKeywords;
 
 // Initialize
-loadKeywords();
+init();
+
+})(); // End of async IIFE

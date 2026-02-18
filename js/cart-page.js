@@ -5,6 +5,18 @@ const cartSummarySection = document.getElementById("cartSummarySection");
 
 let cart = getCart();
 
+// Helper to prevent XSS
+function escapeHtml(text) {
+    if (!text) return '';
+    return text
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 function renderCart() {
     cartItemsDiv.innerHTML = "";
     let total = 0;
@@ -27,13 +39,18 @@ function renderCart() {
     cart.forEach((item, index) => {
         total += item.price * item.quantity;
 
+        const safeName = escapeHtml(item.name);
+        // Size and quantity are likely safe if enforced elsewhere, but escaping size is good practice
+        const safeSize = escapeHtml(item.size);
+        const safeImage = escapeHtml(item.image);
+
         const itemDiv = document.createElement("div");
         itemDiv.className = "cart-item";
         itemDiv.innerHTML = `
-            <img src="${item.image}" alt="${item.name}">
+            <img src="${safeImage}" alt="${safeName}">
             <div class="cart-item-details">
-                <h3>${item.name}</h3>
-                <p>Size: <strong>${item.size}</strong></p>
+                <h3>${safeName}</h3>
+                <p>Size: <strong>${safeSize}</strong></p>
                 <p class="cart-item-price">₹${item.price.toLocaleString('en-IN')} × ${item.quantity}</p>
             </div>
             <div class="cart-item-actions">

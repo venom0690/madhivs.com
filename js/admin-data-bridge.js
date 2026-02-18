@@ -95,16 +95,27 @@
             return homepageCache;
         }
 
-        // No dedicated homepage endpoint exists.
-        // Build homepage data from products flagged as trending/popular.
-        const products = await getAdminProducts();
-        homepageCache = {
+        const result = await fetchAPI('/content/homepage');
+        if (result && result.data) {
+            homepageCache = result.data;
+            cacheTimestamp = Date.now();
+            return homepageCache;
+        }
+
+        // Fallback structure if API fails
+        return {
             sliderImages: [],
-            trendingProducts: products.filter(p => p.is_trending),
-            popularProducts: products.filter(p => p.is_popular)
+            trendingProductIds: [],
+            popularProductIds: []
         };
-        cacheTimestamp = Date.now();
-        return homepageCache;
+    }
+
+    /**
+     * Get search keywords from API
+     */
+    async function getAdminKeywords() {
+        const result = await fetchAPI('/content/keywords');
+        return result && result.data ? result.data : [];
     }
 
     /**
@@ -149,11 +160,14 @@
      */
     async function getAdminTrendingProducts() {
         const homepage = await getAdminHomepageContent();
-        if (homepage.trendingProducts && homepage.trendingProducts.length > 0) {
-            return homepage.trendingProducts;
-        }
-        // Fallback: get products marked as trending
         const products = await getAdminProducts();
+
+        // Use IDs from homepage settings if available
+        if (homepage.trendingProductIds && homepage.trendingProductIds.length > 0) {
+            return products.filter(p => homepage.trendingProductIds.includes(p.id.toString()) || homepage.trendingProductIds.includes(p.id));
+        }
+
+        // Fallback: get products marked as trending in DB
         return products.filter(prod => prod.is_trending == 1 || prod.is_trending === true);
     }
 
@@ -162,11 +176,14 @@
      */
     async function getAdminPopularProducts() {
         const homepage = await getAdminHomepageContent();
-        if (homepage.popularProducts && homepage.popularProducts.length > 0) {
-            return homepage.popularProducts;
-        }
-        // Fallback: get products marked as popular
         const products = await getAdminProducts();
+
+        // Use IDs from homepage settings if available
+        if (homepage.popularProductIds && homepage.popularProductIds.length > 0) {
+            return products.filter(p => homepage.popularProductIds.includes(p.id.toString()) || homepage.popularProductIds.includes(p.id));
+        }
+
+        // Fallback: get products marked as popular in DB
         return products.filter(prod => prod.is_popular == 1 || prod.is_popular === true);
     }
 
@@ -191,7 +208,10 @@
      */
     async function getAdminSliderImages() {
         const homepage = await getAdminHomepageContent();
-        return homepage.sliderImages || [];
+        // Return active slider images sorted by order
+        return (homepage.sliderImages || [])
+            .filter(img => img.isActive)
+            .sort((a, b) => a.order - b.order);
     }
 
     /**
@@ -265,6 +285,7 @@
         getProducts: getAdminProducts,
         getCategories: getAdminCategories,
         getHomepageContent: getAdminHomepageContent,
+        getKeywords: getAdminKeywords,
 
         // Specific getters (async)
         getProductById: getAdminProductById,

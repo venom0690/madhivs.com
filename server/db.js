@@ -8,7 +8,9 @@ const pool = mysql.createPool({
     database: process.env.DB_NAME || 'maadhivs_boutique',
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 50, // Limit queue to prevent memory leaks
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 0
 });
 
 // Test connection

@@ -1,4 +1,4 @@
-// Cart Functions
+// Cart utility: getSelectedSize (used by addToCart in cart.js)
 function getSelectedSize(productId) {
   const sizeBtns = document.querySelectorAll(`[data-product-id="${productId}"] .size-btn.selected`);
   if (sizeBtns.length > 0) {
@@ -7,40 +7,8 @@ function getSelectedSize(productId) {
   return null;
 }
 
-function addToCart(name, price, image, category = '', size = null, productId = null) {
-  // Get size if not provided and productId is available
-  if (!size && productId) {
-    size = getSelectedSize(productId);
-  }
-
-  if (!size) {
-    showNotification("Please select a size");
-    return;
-  }
-
-  let cart = JSON.parse(localStorage.getItem("cart")) || [];
-  const itemId = `${name}-${size}`;
-  const existingItem = cart.find(item => item.id === itemId);
-
-  if (existingItem) {
-    existingItem.quantity += 1;
-    showNotification(`${name} (Size: ${size}) quantity updated!`);
-  } else {
-    cart.push({
-      id: itemId,
-      name,
-      price,
-      image,
-      category,
-      size,
-      quantity: 1
-    });
-    showNotification(`${name} (Size: ${size}) added to cart!`);
-  }
-
-  localStorage.setItem("cart", JSON.stringify(cart));
-  updateCartCount();
-}
+// NOTE: addToCart is defined in cart.js (the canonical version)
+// It accepts both positional params and object params.
 
 function removeFromCart(itemId) {
   let cart = JSON.parse(localStorage.getItem("cart")) || [];
@@ -64,6 +32,18 @@ function updateQuantity(itemId, change) {
     loadCart();
     updateCartCount();
   }
+}
+
+// Helper to prevent XSS
+function escapeHtml(text) {
+  if (!text) return '';
+  return text
+    .toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function loadCart() {
@@ -93,25 +73,32 @@ function loadCart() {
   cart.forEach((item, index) => {
     const itemTotal = item.price * item.quantity;
     total += itemTotal;
+
+    const safeName = escapeHtml(item.name);
+    const safeCategory = escapeHtml(item.category || '');
+    const safeSize = escapeHtml(item.size || '');
+    const safeId = escapeHtml(item.id);
+    const safeImage = escapeHtml(item.image || 'https://via.placeholder.com/120');
+
     html += `
       <div class="cart-item">
-        <img src="${item.image || 'https://via.placeholder.com/120'}" alt="${item.name}">
+        <img src="${safeImage}" alt="${safeName}">
         <div class="cart-item-info">
-          <h3>${item.name}</h3>
+          <h3>${safeName}</h3>
           <div class="item-details">
-            ${item.category ? `<span><strong>Category:</strong> ${item.category}</span>` : ''}
-            ${item.size ? `<span><strong>Size:</strong> ${item.size}</span>` : ''}
+            ${safeCategory ? `<span><strong>Category:</strong> ${safeCategory}</span>` : ''}
+            ${safeSize ? `<span><strong>Size:</strong> ${safeSize}</span>` : ''}
           </div>
           <p>₹${item.price.toLocaleString()}</p>
         </div>
         <div class="quantity-control">
-          <button class="quantity-btn" onclick="updateQuantity('${item.id}', -1)">-</button>
+          <button class="quantity-btn" onclick="updateQuantity('${safeId}', -1)">-</button>
           <span class="quantity">${item.quantity}</span>
-          <button class="quantity-btn" onclick="updateQuantity('${item.id}', 1)">+</button>
+          <button class="quantity-btn" onclick="updateQuantity('${safeId}', 1)">+</button>
         </div>
         <div class="cart-item-actions">
           <p style="font-size: 20px; font-weight: 700; color: #667eea; margin-bottom: 10px;">₹${itemTotal.toLocaleString()}</p>
-          <button class="btn btn-secondary" onclick="removeFromCart('${item.id}')">Remove</button>
+          <button class="btn btn-secondary" onclick="removeFromCart('${safeId}')">Remove</button>
         </div>
       </div>
     `;
@@ -205,19 +192,24 @@ function loadWishlist() {
   let html = "";
 
   wishlist.forEach(item => {
+    const safeName = escapeHtml(item.name);
+    const safeNameForJs = item.name.replace(/'/g, "\\'");
+    const safeCategory = escapeHtml(item.category || '');
+    const safeImage = escapeHtml(item.image || 'https://via.placeholder.com/120');
+
     html += `
       <div class="wishlist-item">
-        <img src="${item.image || 'https://via.placeholder.com/120'}" alt="${item.name}">
+        <img src="${safeImage}" alt="${safeName}">
         <div class="wishlist-item-info">
-          <h3>${item.name}</h3>
+          <h3>${safeName}</h3>
           <div class="item-details">
-            ${item.category ? `<span><strong>Category:</strong> ${item.category}</span>` : ''}
+            ${safeCategory ? `<span><strong>Category:</strong> ${safeCategory}</span>` : ''}
           </div>
           <p>₹${item.price.toLocaleString()}</p>
         </div>
         <div class="wishlist-item-actions">
           <button class="btn" onclick="window.location.href='shop.html'">Select Size & Add to Cart</button>
-          <button class="btn btn-secondary" onclick="toggleWishlist('${item.name}', ${item.price}, '${item.image}', '${item.category || ''}')">Remove</button>
+          <button class="btn btn-secondary" onclick="toggleWishlist('${safeNameForJs}', ${item.price}, '${safeImage}', '${safeCategory}')">Remove</button>
         </div>
       </div>
     `;
@@ -252,10 +244,13 @@ function loadCheckoutSummary() {
   cart.forEach(item => {
     const itemTotal = item.price * item.quantity;
     total += itemTotal;
-    const sizeText = item.size ? ` (${item.size})` : '';
+    const safeName = escapeHtml(item.name);
+    const safeSize = escapeHtml(item.size || '');
+    const sizeText = safeSize ? ` (${safeSize})` : '';
+
     html += `
       <div class="order-item">
-        <span>${item.name}${sizeText} x${item.quantity}</span>
+        <span>${safeName}${sizeText} x${item.quantity}</span>
         <span>₹${itemTotal.toLocaleString()}</span>
       </div>
     `;

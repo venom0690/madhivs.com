@@ -1,12 +1,14 @@
 /**
  * Homepage Control Logic
+ * Fully Async/Await version
  */
 
-// Auth guard
-authService.requireAuth();
+// Auth guard - wrapped in async IIFE
+(async function initializePage() {
+    await authService.requireAuth();
 
-// Load user info
-const user = authService.getCurrentUser();
+    // Load user info
+    const user = authService.getCurrentUser();
 if (user) {
     document.getElementById('userName').textContent = user.email.split('@')[0];
 }
@@ -16,8 +18,13 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
     authService.logout();
 });
 
-// Current homepage content
-let homepageContent = dataService.getHomepageContent();
+// State
+let homepageContent = {
+    sliderImages: [],
+    trendingProductIds: [],
+    popularProductIds: []
+};
+let allProducts = [];
 
 // Modal elements
 const sliderModal = document.getElementById('sliderModal');
@@ -39,6 +46,36 @@ sliderImageFileInput.addEventListener('change', handleSliderImageFile);
 // Product selects
 document.getElementById('trendingProductSelect').addEventListener('change', addTrendingProduct);
 document.getElementById('popularProductSelect').addEventListener('change', addPopularProduct);
+
+// Initialize Data
+async function init() {
+    try {
+        // Load content and products in parallel
+        const [content, products] = await Promise.all([
+            dataService.getHomepageContent(),
+            dataService.getProducts()
+        ]);
+
+        homepageContent = content || {
+            sliderImages: [],
+            trendingProductIds: [],
+            popularProductIds: []
+        };
+        allProducts = products || [];
+
+        renderAll();
+    } catch (error) {
+        console.error('Failed to load homepage data:', error);
+        alert('Failed to load data: ' + error.message);
+    }
+}
+
+function renderAll() {
+    loadSliderImages();
+    loadProductDropdowns();
+    loadTrendingProducts();
+    loadPopularProducts();
+}
 
 // Open slider modal
 function openSliderModal() {
@@ -68,15 +105,19 @@ function updateSliderPreview() {
 }
 
 // Handle slider image file
-function handleSliderImageFile(e) {
+async function handleSliderImageFile(e) {
     const file = e.target.files[0];
     if (file) {
-        const reader = new FileReader();
-        reader.onload = function (event) {
-            sliderImageUrlInput.value = event.target.result;
+        try {
+            // Upload immediately to get URL
+            sliderImageUrlInput.placeholder = "Uploading...";
+            const result = await dataService.uploadImage(file);
+            sliderImageUrlInput.value = result.url;
             updateSliderPreview();
-        };
-        reader.readAsDataURL(file);
+        } catch (error) {
+            alert('Upload failed: ' + error.message);
+            sliderImageFileInput.value = '';
+        }
     }
 }
 
@@ -145,7 +186,7 @@ function toggleSliderActive(id) {
 function loadSliderImages() {
     const container = document.getElementById('sliderImagesContainer');
 
-    if (homepageContent.sliderImages.length === 0) {
+    if (!homepageContent.sliderImages || homepageContent.sliderImages.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">🖼️</div>
@@ -176,13 +217,14 @@ function loadSliderImages() {
 
 // Load product dropdowns
 function loadProductDropdowns() {
-    const products = dataService.getProducts();
-
     // Trending products
-    const trendingProducts = products.filter(p => p.isTrending);
     const trendingSelect = document.getElementById('trendingProductSelect');
     trendingSelect.innerHTML = '<option value="">Choose a product to add</option>';
-    trendingProducts.forEach(product => {
+
+    // Sort alphabetically
+    const sortedProducts = [...allProducts].sort((a, b) => a.name.localeCompare(b.name));
+
+    sortedProducts.forEach(product => {
         if (!homepageContent.trendingProductIds.includes(product.id)) {
             const option = document.createElement('option');
             option.value = product.id;
@@ -192,10 +234,10 @@ function loadProductDropdowns() {
     });
 
     // Popular products
-    const popularProducts = products.filter(p => p.isPopular);
     const popularSelect = document.getElementById('popularProductSelect');
     popularSelect.innerHTML = '<option value="">Choose a product to add</option>';
-    popularProducts.forEach(product => {
+
+    sortedProducts.forEach(product => {
         if (!homepageContent.popularProductIds.includes(product.id)) {
             const option = document.createElement('option');
             option.value = product.id;
@@ -210,7 +252,10 @@ function addTrendingProduct(e) {
     const productId = e.target.value;
     if (!productId) return;
 
+    // Convert to number if needed (legacy ids vs new ids)
+    // Actually keep as string/mix to match backend ID type
     homepageContent.trendingProductIds.push(productId);
+
     e.target.value = '';
     loadProductDropdowns();
     loadTrendingProducts();
@@ -222,6 +267,7 @@ function addPopularProduct(e) {
     if (!productId) return;
 
     homepageContent.popularProductIds.push(productId);
+
     e.target.value = '';
     loadProductDropdowns();
     loadPopularProducts();
@@ -229,21 +275,22 @@ function addPopularProduct(e) {
 
 // Remove trending product
 function removeTrendingProduct(productId) {
-    homepageContent.trendingProductIds = homepageContent.trendingProductIds.filter(id => id !== productId);
+    // Filter loose equality to catch both string/number IDs
+    homepageContent.trendingProductIds = homepageContent.trendingProductIds.filter(id => id != productId);
     loadProductDropdowns();
     loadTrendingProducts();
 }
 
 // Remove popular product
 function removePopularProduct(productId) {
-    homepageContent.popularProductIds = homepageContent.popularProductIds.filter(id => id !== productId);
+    homepageContent.popularProductIds = homepageContent.popularProductIds.filter(id => id != productId);
     loadProductDropdowns();
     loadPopularProducts();
 }
 
 // Move trending product
 function moveTrendingProduct(productId, direction) {
-    const index = homepageContent.trendingProductIds.indexOf(productId);
+    const index = homepageContent.trendingProductIds.findIndex(id => id == productId);
     if (index === -1) return;
 
     const newIndex = direction === 'up' ? index - 1 : index + 1;
@@ -257,7 +304,7 @@ function moveTrendingProduct(productId, direction) {
 
 // Move popular product
 function movePopularProduct(productId, direction) {
-    const index = homepageContent.popularProductIds.indexOf(productId);
+    const index = homepageContent.popularProductIds.findIndex(id => id == productId);
     if (index === -1) return;
 
     const newIndex = direction === 'up' ? index - 1 : index + 1;
@@ -272,23 +319,22 @@ function movePopularProduct(productId, direction) {
 // Load trending products
 function loadTrendingProducts() {
     const container = document.getElementById('trendingProductsList');
-    const products = dataService.getProducts();
 
-    if (homepageContent.trendingProductIds.length === 0) {
+    if (!homepageContent.trendingProductIds || homepageContent.trendingProductIds.length === 0) {
         container.innerHTML = '<div class="empty-state"><div class="empty-state-text">No trending products selected</div></div>';
         return;
     }
 
     container.innerHTML = homepageContent.trendingProductIds.map((productId, index) => {
-        const product = products.find(p => p.id === productId);
+        const product = allProducts.find(p => p.id == productId);
         if (!product) return '';
 
         return `
             <div style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 0.5rem;">
-                <img src="${product.primaryImage}" alt="${product.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: var(--radius-sm);">
+                <img src="${product.primary_image || product.primaryImage || 'https://via.placeholder.com/60'}" alt="${product.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: var(--radius-sm);">
                 <div style="flex: 1;">
                     <div style="font-weight: 500;">${product.name}</div>
-                    <div style="font-size: 13px; color: var(--text-secondary);">₹${product.price.toLocaleString()}</div>
+                    <div style="font-size: 13px; color: var(--text-secondary);">₹${Number(product.price).toLocaleString()}</div>
                 </div>
                 <div style="display: flex; gap: 0.5rem;">
                     <button class="btn btn-secondary btn-sm" onclick="moveTrendingProduct('${productId}', 'up')" ${index === 0 ? 'disabled' : ''}>↑</button>
@@ -303,23 +349,22 @@ function loadTrendingProducts() {
 // Load popular products
 function loadPopularProducts() {
     const container = document.getElementById('popularProductsList');
-    const products = dataService.getProducts();
 
-    if (homepageContent.popularProductIds.length === 0) {
+    if (!homepageContent.popularProductIds || homepageContent.popularProductIds.length === 0) {
         container.innerHTML = '<div class="empty-state"><div class="empty-state-text">No popular products selected</div></div>';
         return;
     }
 
     container.innerHTML = homepageContent.popularProductIds.map((productId, index) => {
-        const product = products.find(p => p.id === productId);
+        const product = allProducts.find(p => p.id == productId);
         if (!product) return '';
 
         return `
             <div style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 0.5rem;">
-                <img src="${product.primaryImage}" alt="${product.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: var(--radius-sm);">
+                <img src="${product.primary_image || product.primaryImage || 'https://via.placeholder.com/60'}" alt="${product.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: var(--radius-sm);">
                 <div style="flex: 1;">
                     <div style="font-weight: 500;">${product.name}</div>
-                    <div style="font-size: 13px; color: var(--text-secondary);">₹${product.price.toLocaleString()}</div>
+                    <div style="font-size: 13px; color: var(--text-secondary);">₹${Number(product.price).toLocaleString()}</div>
                 </div>
                 <div style="display: flex; gap: 0.5rem;">
                     <button class="btn btn-secondary btn-sm" onclick="movePopularProduct('${productId}', 'up')" ${index === 0 ? 'disabled' : ''}>↑</button>
@@ -332,12 +377,19 @@ function loadPopularProducts() {
 }
 
 // Save all changes
-function saveAllChanges() {
+async function saveAllChanges() {
+    const saveBtn = document.getElementById('saveChangesBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
     try {
-        dataService.updateHomepageContent(homepageContent);
+        await dataService.updateHomepageContent(homepageContent);
         alert('✅ Homepage content saved successfully!');
     } catch (error) {
         alert('Error saving: ' + error.message);
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
     }
 }
 
@@ -351,7 +403,6 @@ window.moveTrendingProduct = moveTrendingProduct;
 window.movePopularProduct = movePopularProduct;
 
 // Initialize
-loadSliderImages();
-loadProductDropdowns();
-loadTrendingProducts();
-loadPopularProducts();
+init();
+
+})(); // End of async IIFE

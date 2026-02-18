@@ -3,11 +3,12 @@
  * Updated for parent_id subcategory system
  */
 
-// Auth guard
-authService.requireAuth();
+// Auth guard - wrapped in async IIFE
+(async function initializePage() {
+    await authService.requireAuth();
 
-// Load user info
-const user = authService.getCurrentUser();
+    // Load user info
+    const user = authService.getCurrentUser();
 if (user) {
     document.getElementById('userName').textContent = user.email.split('@')[0];
 }
@@ -296,3 +297,5 @@ window.loadCategories = loadCategories;
 
 // Initialize
 loadCategories();
+
+})(); // End of async IIFE

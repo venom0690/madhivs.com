@@ -21,6 +21,18 @@
          * @param {Object} product - Product data object
          * @returns {HTMLElement} Product card element
          */
+        // Helper to prevent XSS
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         function createProductCard(product) {
             const productLink = `product.html?id=${product.id}&name=${encodeURIComponent(product.name)}&price=${product.price}&image=${encodeURIComponent(product.image)}`;
             const imageUrl = typeof getImageUrl === 'function' ? getImageUrl(product.image, '?w=600&q=80') : product.image;
@@ -28,24 +40,29 @@
             const card = document.createElement('a');
             card.href = productLink;
             card.className = 'product-card';
-            card.setAttribute('data-category', product.category);
+            card.setAttribute('data-category', escapeHtml(product.category));
+
+            const safeName = escapeHtml(product.name);
+            const safePrice = escapeHtml(product.priceFormatted);
+            const safeImage = escapeHtml(imageUrl);
+            // safeNameForJs not strictly needed here as we use data attributes, but good practice if used in JS
 
             card.innerHTML = `
                 <div class="product-images">
                     <button class="wishlist-heart" 
-                        data-product-name="${product.name}"
-                        data-product-price="${product.priceFormatted}"
-                        data-product-image="${imageUrl}"
+                        data-product-name="${safeName}"
+                        data-product-price="${safePrice}"
+                        data-product-image="${safeImage}"
                         data-product-link="${productLink}">
                         ❤️
                     </button>
                     <img class="main-image" 
-                        src="${imageUrl}" 
-                        alt="${product.name}">
+                        src="${safeImage}" 
+                        alt="${safeName}">
                 </div>
                 <div class="product-info">
-                    <h3 class="product-name">${product.name}</h3>
-                    <p class="product-price">${product.priceFormatted}</p>
+                    <h3 class="product-name">${safeName}</h3>
+                    <p class="product-price">${safePrice}</p>
                 </div>
             `;
 

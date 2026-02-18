@@ -3,11 +3,12 @@
  * Fixed with proper async/await for API calls
  */
 
-// Auth guard
-authService.requireAuth();
+// Auth guard - wrapped in async IIFE
+(async function initializePage() {
+    await authService.requireAuth();
 
-// Load user info
-const user = authService.getCurrentUser();
+    // Load user info
+    const user = authService.getCurrentUser();
 if (user) {
     document.getElementById('userName').textContent = user.email.split('@')[0];
 }
@@ -24,6 +25,17 @@ document.getElementById('closeDetailsBtn').addEventListener('click', closeModal)
 
 // Filter handler
 document.getElementById('statusFilter').addEventListener('change', loadOrders);
+
+// Prevent XSS in admin templates
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
 // Close modal
 function closeModal() {
@@ -73,13 +85,13 @@ function viewOrderDetails(order) {
             <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">Customer Information</h4>
             <div style="display: grid; grid-template-columns: 150px 1fr; gap: 0.5rem; font-size: 14px;">
                 <div style="color: var(--text-secondary);">Name:</div>
-                <div>${order.customerInfo?.name || order.customerName || 'N/A'}</div>
+                <div>${escapeHtml(order.customerInfo?.name || order.customerName || 'N/A')}</div>
                 
                 <div style="color: var(--text-secondary);">Email:</div>
-                <div>${order.customerInfo?.email || order.customerEmail || 'N/A'}</div>
+                <div>${escapeHtml(order.customerInfo?.email || order.customerEmail || 'N/A')}</div>
                 
                 <div style="color: var(--text-secondary);">Phone:</div>
-                <div>${order.customerInfo?.phone || order.customerPhone || 'N/A'}</div>
+                <div>${escapeHtml(order.customerInfo?.phone || order.customerPhone || 'N/A')}</div>
                 
                 <div style="color: var(--text-secondary);">Address:</div>
                 <div>${formatAddress(order.shippingAddress)}</div>
@@ -100,7 +112,7 @@ function viewOrderDetails(order) {
                 <tbody>
                     ${order.items.map(item => `
                         <tr>
-                            <td style="padding: 0.5rem;">${item.name}</td>
+                            <td style="padding: 0.5rem;">${escapeHtml(item.name)}</td>
                             <td style="padding: 0.5rem; text-align: center;">${item.size || 'N/A'}</td>
                             <td style="padding: 0.5rem; text-align: center;">${item.quantity}</td>
                             <td style="padding: 0.5rem; text-align: right;">₹${(item.price * item.quantity).toLocaleString()}</td>
@@ -187,9 +199,9 @@ async function loadOrders() {
 
             return `
                             <tr>
-                                <td><strong>${order.orderNumber || orderId}</strong></td>
-                                <td>${customerName}</td>
-                                <td>${customerEmail}</td>
+                                <td><strong>${escapeHtml(order.orderNumber || orderId)}</strong></td>
+                                <td>${escapeHtml(customerName)}</td>
+                                <td>${escapeHtml(customerEmail)}</td>
                                 <td>${order.items.length} item(s)</td>
                                 <td><strong>₹${order.totalAmount.toLocaleString()}</strong></td>
                                 <td>
@@ -251,3 +263,5 @@ window.loadOrders = loadOrders;
 
 // Initialize
 loadOrders();
+
+})(); // End of async IIFE

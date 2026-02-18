@@ -3,11 +3,12 @@
  * Fixed with proper async/await for API calls
  */
 
-// Auth guard
-authService.requireAuth();
+// Auth guard - wrapped in async IIFE
+(async function initializePage() {
+    await authService.requireAuth();
 
-// Load user info
-const user = authService.getCurrentUser();
+    // Load user info
+    const user = authService.getCurrentUser();
 if (user) {
     document.getElementById('userName').textContent = user.email.split('@')[0];
 }
@@ -33,6 +34,17 @@ async function loadStatistics() {
         document.getElementById('totalCategories').textContent = '-';
         document.getElementById('pendingOrders').textContent = '-';
     }
+}
+
+// Prevent XSS in admin templates
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 // Load recent orders
@@ -73,15 +85,15 @@ async function loadRecentOrders() {
 
             return `
                             <tr>
-                                <td>${order.orderNumber || orderId}</td>
-                                <td>${customerName}</td>
+                                <td>${escapeHtml(order.orderNumber || orderId)}</td>
+                                <td>${escapeHtml(customerName)}</td>
                                 <td>₹${order.totalAmount.toLocaleString()}</td>
                                 <td>
                                     <span class="badge ${orderStatus === 'Delivered' ? 'badge-success' :
                     orderStatus === 'Shipped' ? 'badge-warning' :
                         'badge-primary'
                 }">
-                                        ${orderStatus}
+                                        ${escapeHtml(orderStatus)}
                                     </span>
                                 </td>
                                 <td>${new Date(order.createdAt).toLocaleDateString()}</td>
@@ -108,3 +120,5 @@ async function loadRecentOrders() {
 // Initialize dashboard
 loadStatistics();
 loadRecentOrders();
+
+})(); // End of async IIFE

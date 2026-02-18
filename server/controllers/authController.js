@@ -1,11 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
-
-// FIX #16: Email validation helper
-function isValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
+const { isValidEmail } = require('../utils/validators');
 
 /**
  * Admin Login

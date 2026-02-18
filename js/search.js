@@ -7,19 +7,66 @@
  * Handle search on index page (redirects to category pages)
  * @param {HTMLElement} searchInput - The search input element
  */
-function handleIndexPageSearch(searchInput) {
-    // Keywords that indicate category
+/**
+ * Handle search on index page (redirects to category pages)
+ * @param {HTMLElement} searchInput - The search input element
+ */
+async function handleIndexPageSearch(searchInput) {
+    // Default redirections (fallback)
     const womenKeywords = ['saree', 'lehenga', 'suit', 'anarkali', 'women', 'palazzo', 'georgette', 'kanjivaram', 'chanderi'];
     const menKeywords = ['kurta', 'sherwani', 'jacket', 'men', 'nehru', 'bandhgala'];
 
-    function performSearch() {
+    // Load dynamic keywords from AdminDataBridge if available
+    let dynamicKeywords = [];
+    if (typeof AdminDataBridge !== 'undefined') {
+        try {
+            dynamicKeywords = await AdminDataBridge.getKeywords();
+        } catch (e) {
+            console.error('Failed to load dynamic keywords:', e);
+        }
+    }
+
+    async function performSearch() {
         const query = searchInput.value.toLowerCase().trim();
 
         if (query === '') {
             return;
         }
 
-        // Check if query matches women's categories
+        // 1. Check Dynamic Keywords first
+        if (dynamicKeywords.length > 0) {
+            const match = dynamicKeywords.find(k => k.keyword.toLowerCase() === query);
+
+            if (match) {
+                // Priority A: Linked Categories
+                if (match.linkedCategories && match.linkedCategories.length > 0) {
+                    const categoryId = match.linkedCategories[0]; // Take first one
+                    const category = await AdminDataBridge.getCategoryById(categoryId);
+                    if (category) {
+                        let baseUrl = 'shop.html';
+                        if (category.type === 'Men') baseUrl = 'men.html';
+                        else if (category.type === 'Women') baseUrl = 'women.html';
+                        window.location.href = `${baseUrl}?category=${categoryId}`;
+                        return;
+                    }
+                }
+
+                // Priority B: Linked Products
+                if (match.linkedProducts && match.linkedProducts.length > 0) {
+                    if (match.linkedProducts.length === 1) {
+                        // Single product - go directly to product page
+                        window.location.href = `product.html?id=${match.linkedProducts[0]}`;
+                        return;
+                    } else {
+                        // Multiple products - ideally go to shop with filter, 
+                        // but for now let's fall through to general search or handle simple ID filter if shop supports it
+                        // console.log('Multiple products linked, falling back to name search');
+                    }
+                }
+            }
+        }
+
+        // 2. Check hardcoded fallbacks
         for (let keyword of womenKeywords) {
             if (query.includes(keyword)) {
                 window.location.href = 'women.html';
@@ -27,7 +74,6 @@ function handleIndexPageSearch(searchInput) {
             }
         }
 
-        // Check if query matches men's categories
         for (let keyword of menKeywords) {
             if (query.includes(keyword)) {
                 window.location.href = 'men.html';
@@ -35,8 +81,9 @@ function handleIndexPageSearch(searchInput) {
             }
         }
 
-        // Default: go to women's page for general searches
-        window.location.href = 'women.html';
+        // 3. Default: Search on Shop page (assuming shop.html supports ?search=)
+        // If shop.html doesn't support it, default to women.html as before
+        window.location.href = `shop.html?search=${encodeURIComponent(query)}`;
     }
 
     // Search on Enter key

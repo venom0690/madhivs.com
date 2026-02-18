@@ -1,21 +1,19 @@
 -- ============================================
--- Maadhivs Boutique - MySQL Database Schema
+-- MAADHIVS BOUTIQUE - UNIFIED DATABASE SETUP
 -- ============================================
--- Simple, production-ready schema for XAMPP/WAMP
--- No over-engineering, just what's needed
-
--- Drop existing tables (for clean setup)
-DROP TABLE IF EXISTS order_items;
-DROP TABLE IF EXISTS shipping_addresses;
-DROP TABLE IF EXISTS orders;
-DROP TABLE IF EXISTS products;
-DROP TABLE IF EXISTS categories;
-DROP TABLE IF EXISTS admins;
+-- This single script handles both:
+-- 1. New Installations (creates all tables)
+-- 2. Updates/Migrations (adds missing tables/columns to existing databases)
+--
+-- USAGE: Run this script in phpMyAdmin or via command line against your database.
+-- ============================================
 
 -- ============================================
--- ADMINS TABLE
+-- 1. CORE TABLES (Create if not exists)
 -- ============================================
-CREATE TABLE admins (
+
+-- Admins
+CREATE TABLE IF NOT EXISTS admins (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
@@ -24,10 +22,8 @@ CREATE TABLE admins (
     INDEX idx_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ============================================
--- CATEGORIES TABLE
--- ============================================
-CREATE TABLE categories (
+-- Categories
+CREATE TABLE IF NOT EXISTS categories (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     slug VARCHAR(150) NOT NULL UNIQUE,
@@ -44,10 +40,8 @@ CREATE TABLE categories (
     FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ============================================
--- PRODUCTS TABLE
--- ============================================
-CREATE TABLE products (
+-- Products
+CREATE TABLE IF NOT EXISTS products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(200) NOT NULL,
     slug VARCHAR(250) NOT NULL UNIQUE,
@@ -85,10 +79,8 @@ CREATE TABLE products (
     FOREIGN KEY (subcategory_id) REFERENCES categories(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ============================================
--- ORDERS TABLE
--- ============================================
-CREATE TABLE orders (
+-- Orders
+CREATE TABLE IF NOT EXISTS orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_number VARCHAR(50) NOT NULL UNIQUE,
     customer_name VARCHAR(100) NOT NULL,
@@ -111,10 +103,8 @@ CREATE TABLE orders (
     INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ============================================
--- ORDER ITEMS TABLE
--- ============================================
-CREATE TABLE order_items (
+-- Order Items
+CREATE TABLE IF NOT EXISTS order_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
     product_id INT,
@@ -130,10 +120,8 @@ CREATE TABLE order_items (
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ============================================
--- SHIPPING ADDRESSES TABLE
--- ============================================
-CREATE TABLE shipping_addresses (
+-- Shipping Addresses
+CREATE TABLE IF NOT EXISTS shipping_addresses (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
     street VARCHAR(255) NOT NULL,
@@ -145,34 +133,71 @@ CREATE TABLE shipping_addresses (
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ============================================
--- INSERT DEFAULT ADMIN
--- ============================================
--- DO NOT hardcode bcrypt hashes here — they are unique per generation
--- and pasting one from elsewhere will NOT match the original password.
---
--- Instead, run the seed script AFTER creating the schema:
---   node seeds/seedAdmin.js
---
--- Default credentials (set via env or defaults):
---   Email:    admin@maadhivs.com
---   Password: Admin@123
+-- Settings (Key-Value Store)
+CREATE TABLE IF NOT EXISTS settings (
+    setting_key VARCHAR(50) PRIMARY KEY,
+    setting_value JSON NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Search Keywords
+CREATE TABLE IF NOT EXISTS search_keywords (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    keyword VARCHAR(100) NOT NULL UNIQUE,
+    linked_products JSON DEFAULT NULL, -- Array of product IDs
+    linked_categories JSON DEFAULT NULL, -- Array of category IDs
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- SAMPLE DATA (Optional - for testing)
+-- 2. SCHEMA MIGRATIONS (For existing databases)
 -- ============================================
 
--- Sample Categories
-INSERT INTO categories (name, slug, type, description) VALUES 
-('Sarees', 'sarees', 'Women', 'Traditional and designer sarees'),
-('Kurtas', 'kurtas', 'Men', 'Ethnic kurtas for men'),
-('Accessories', 'accessories', 'General', 'Fashion accessories');
+-- Ensure Categories has parent_id (for multi-level categories)
+SET @dbname = DATABASE();
+SET @tablename = "categories";
+SET @columnname = "parent_id";
+SET @preparedStatement = (SELECT IF(
+  (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE
+      (table_name = @tablename)
+      AND (table_schema = @dbname)
+      AND (column_name = @columnname)
+  ) > 0,
+  "SELECT 1",
+  "ALTER TABLE categories ADD COLUMN parent_id INT DEFAULT NULL, ADD FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE CASCADE;"
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
 
--- Sample Products (uncomment if you want test data)
--- INSERT INTO products (name, slug, description, price, category_id, stock, primary_image, images, is_trending, is_popular) VALUES 
--- ('Designer Silk Saree', 'designer-silk-saree', 'Beautiful silk saree for special occasions', 8999.00, 1, 10, '/uploads/sample1.jpg', '[\"/uploads/sample1.jpg\"]', 1, 1),
--- ('Cotton Kurta', 'cotton-kurta', 'Comfortable cotton kurta for daily wear', 1299.00, 2, 25, '/uploads/sample2.jpg', '[\"/uploads/sample2.jpg\"]', 0, 1);
+-- Ensure Products has subcategory_id
+SET @tablename = "products";
+SET @columnname = "subcategory_id";
+SET @preparedStatement = (SELECT IF(
+  (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE
+      (table_name = @tablename)
+      AND (table_schema = @dbname)
+      AND (column_name = @columnname)
+  ) > 0,
+  "SELECT 1",
+  "ALTER TABLE products ADD COLUMN subcategory_id INT DEFAULT NULL, ADD INDEX (subcategory_id), ADD FOREIGN KEY (subcategory_id) REFERENCES categories(id) ON DELETE SET NULL;"
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
 
 -- ============================================
--- END OF SCHEMA
+-- 3. DEFAULT DATA
+-- ============================================
+
+-- Insert default homepage config if it doesn't exist
+INSERT IGNORE INTO settings (setting_key, setting_value) VALUES 
+('homepage_config', '{"sliderImages": [], "trendingProductIds": [], "popularProductIds": []}');
+
+-- ============================================
+-- END OF SETUP
 -- ============================================

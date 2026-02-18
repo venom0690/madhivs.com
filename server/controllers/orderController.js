@@ -1,4 +1,5 @@
 const db = require('../db');
+const { isValidEmail, isValidPhone, sanitizeInput, validateText } = require('../utils/validators');
 
 /**
  * Create order
@@ -10,7 +11,6 @@ exports.createOrder = async (req, res) => {
     const {
         customerInfo,
         items,
-        totalAmount,
         shippingAddress,
         paymentMethod,
         notes
@@ -24,20 +24,28 @@ exports.createOrder = async (req, res) => {
         });
     }
 
+    // Validate and sanitize customer name
+    const nameValidation = validateText(customerInfo.name, 2, 100);
+    if (!nameValidation.valid) {
+        return res.status(400).json({
+            status: 'error',
+            message: `Customer name: ${nameValidation.error}`
+        });
+    }
+
     // FIX #16: Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(customerInfo.email)) {
+    if (!isValidEmail(customerInfo.email)) {
         return res.status(400).json({
             status: 'error',
             message: 'Invalid email format'
         });
     }
 
-    // Phone validation
-    if (!/^[\d\+\-\s]{7,15}$/.test(customerInfo.phone)) {
+    // Phone validation (accepting 10-15 digits)
+    if (!isValidPhone(customerInfo.phone)) {
         return res.status(400).json({
             status: 'error',
-            message: 'Invalid phone number'
+            message: 'Invalid phone number (10-15 digits required)'
         });
     }
 
@@ -55,34 +63,30 @@ exports.createOrder = async (req, res) => {
         });
     }
 
-    // Validate total amount
-    const totalNum = parseFloat(totalAmount);
-    if (!totalAmount || isNaN(totalNum) || totalNum <= 0) {
+    // Validate shipping address fields
+    const streetValidation = validateText(shippingAddress.street, 5, 255);
+    if (!streetValidation.valid) {
         return res.status(400).json({
             status: 'error',
-            message: 'Valid total amount is required'
+            message: `Street address: ${streetValidation.error}`
         });
     }
 
-    // Validate each item has required fields
-    for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (!item.name && !item.product_name) {
+    const cityValidation = validateText(shippingAddress.city, 2, 100);
+    if (!cityValidation.valid) {
+        return res.status(400).json({
+            status: 'error',
+            message: `City: ${cityValidation.error}`
+        });
+    }
+
+    // Validate notes if provided
+    if (notes) {
+        const notesValidation = validateText(notes, 0, 500);
+        if (!notesValidation.valid) {
             return res.status(400).json({
                 status: 'error',
-                message: `Item ${i + 1} is missing product name`
-            });
-        }
-        if (!item.price || parseFloat(item.price) <= 0) {
-            return res.status(400).json({
-                status: 'error',
-                message: `Item ${i + 1} has invalid price`
-            });
-        }
-        if (!item.quantity || parseInt(item.quantity) < 1) {
-            return res.status(400).json({
-                status: 'error',
-                message: `Item ${i + 1} has invalid quantity`
+                message: `Notes: ${notesValidation.error}`
             });
         }
     }
@@ -92,6 +96,60 @@ exports.createOrder = async (req, res) => {
 
     try {
         connection = await db.getConnection();
+
+        // Start transaction
+        await connection.beginTransaction();
+
+        // 1. Verify Stock and Calculate Real Total
+        // Prevent "Trusting Frontend Price" vulnerability
+        let calculatedTotal = 0;
+        const verifiedItems = [];
+
+        for (const item of items) {
+            const productId = item.product_id || item.id;
+            const requestedQty = parseInt(item.quantity);
+
+            if (!productId || isNaN(requestedQty) || requestedQty <= 0) {
+                throw new Error('Invalid item data');
+            }
+
+            // Lock row for update to prevent race conditions
+            const [products] = await connection.query(
+                'SELECT id, name, price, stock, primary_image FROM products WHERE id = ? FOR UPDATE',
+                [productId]
+            );
+
+            if (products.length === 0) {
+                throw new Error(`Product ID ${productId} not found`);
+            }
+
+            const product = products[0];
+
+            // Check stock
+            if (product.stock < requestedQty) {
+                throw new Error(`Insufficient stock for ${product.name}. Available: ${product.stock}`);
+            }
+
+            // Use Database Price
+            const itemTotal = parseFloat(product.price) * requestedQty;
+            calculatedTotal += itemTotal;
+
+            verifiedItems.push({
+                product_id: product.id,
+                product_name: product.name,
+                price: parseFloat(product.price),
+                quantity: requestedQty,
+                size: item.size || null,
+                color: item.color || null,
+                image: product.primary_image // Use DB image for consistency
+            });
+
+            // Decrement Stock
+            await connection.query(
+                'UPDATE products SET stock = stock - ? WHERE id = ?',
+                [requestedQty, productId]
+            );
+        }
 
         // FIX #14: Generate unique order number with retry logic
         let orderNumber;
@@ -118,10 +176,7 @@ exports.createOrder = async (req, res) => {
             throw new Error('Failed to generate unique order number after ' + maxAttempts + ' attempts');
         }
 
-        // Start transaction
-        await connection.beginTransaction();
-
-        // Insert order
+        // Insert order with CALCULATED total and sanitized inputs
         const [orderResult] = await connection.query(
             `INSERT INTO orders (
                 order_number, customer_name, customer_email, customer_phone,
@@ -129,93 +184,65 @@ exports.createOrder = async (req, res) => {
             ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
                 orderNumber,
-                customerInfo.name.trim(),
-                customerInfo.email.trim().toLowerCase(),
-                customerInfo.phone.trim(),
-                totalNum,
+                sanitizeInput(customerInfo.name.trim()),
+                sanitizeInput(customerInfo.email.trim().toLowerCase()),
+                sanitizeInput(customerInfo.phone.trim()),
+                calculatedTotal,
                 paymentMethod || 'cod',
-                notes || null
+                notes ? sanitizeInput(notes) : null
             ]
         );
 
         const orderId = orderResult.insertId;
 
-        // Insert order items
-        for (const item of items) {
+        // Insert verified order items
+        for (const item of verifiedItems) {
             await connection.query(
                 `INSERT INTO order_items (
                     order_id, product_id, product_name, price, quantity, size, color, image
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     orderId,
-                    item.product_id || item.id || null,
-                    item.name || item.product_name,
-                    parseFloat(item.price),
-                    parseInt(item.quantity),
-                    item.size || null,
-                    item.color || null,
-                    item.image || null
+                    item.product_id,
+                    item.product_name,
+                    item.price,
+                    item.quantity,
+                    item.size,
+                    item.color,
+                    item.image
                 ]
             );
         }
 
-        // Insert shipping address
+        // Insert shipping address with sanitized inputs
         await connection.query(
             `INSERT INTO shipping_addresses (
                 order_id, street, city, state, pincode, country
             ) VALUES (?, ?, ?, ?, ?, ?)`,
             [
                 orderId,
-                shippingAddress.street.trim(),
-                shippingAddress.city.trim(),
-                shippingAddress.state || null,
-                shippingAddress.pincode || null,
-                shippingAddress.country || 'India'
+                sanitizeInput(shippingAddress.street.trim()),
+                sanitizeInput(shippingAddress.city.trim()),
+                shippingAddress.state ? sanitizeInput(shippingAddress.state) : null,
+                shippingAddress.pincode ? sanitizeInput(shippingAddress.pincode) : null,
+                shippingAddress.country ? sanitizeInput(shippingAddress.country) : 'India'
             ]
         );
 
         // Commit transaction
         await connection.commit();
 
-        // Get complete order with items and address
-        const [orders] = await connection.query(
-            `SELECT o.*, 
-                GROUP_CONCAT(
-                    JSON_OBJECT(
-                        'id', oi.id,
-                        'product_id', oi.product_id,
-                        'product_name', oi.product_name,
-                        'price', oi.price,
-                        'quantity', oi.quantity,
-                        'size', oi.size,
-                        'color', oi.color,
-                        'image', oi.image
-                    )
-                ) as items_json
-            FROM orders o
-            LEFT JOIN order_items oi ON o.id = oi.order_id
-            WHERE o.id = ?
-            GROUP BY o.id`,
-            [orderId]
-        );
-
-        const [addresses] = await connection.query(
-            'SELECT * FROM shipping_addresses WHERE order_id = ?',
-            [orderId]
-        );
-
-        const order = orders[0];
-        try {
-            order.items = order.items_json ? JSON.parse(`[${order.items_json}]`) : [];
-        } catch {
-            order.items = [];
-        }
-        order.shippingAddress = addresses[0] || null;
-        delete order.items_json;
-
+        // Return success response immediately
+        // (Fetching full order details again is unnecessary overhead for creation response)
         res.status(201).json({
             status: 'success',
-            order
+            message: 'Order created successfully',
+            order: {
+                id: orderId,
+                order_number: orderNumber,
+                total_amount: calculatedTotal,
+                items: verifiedItems
+            }
         });
 
     } catch (error) {
@@ -227,10 +254,14 @@ exports.createOrder = async (req, res) => {
                 console.error('Rollback failed:', rollbackError.message);
             }
         }
-        console.error('Create order error:', error);
-        res.status(500).json({
+
+        // Return 400 for business logic errors (stock, invalid item), 500 for others
+        const status = error.message.includes('Insufficient stock') || error.message.includes('Invalid') ? 400 : 500;
+
+        console.error('Create order error:', error.message);
+        res.status(status).json({
             status: 'error',
-            message: 'An error occurred while creating order'
+            message: error.message || 'An error occurred while creating order'
         });
     } finally {
         // FIX #15: Always release connection

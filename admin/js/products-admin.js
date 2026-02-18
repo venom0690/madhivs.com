@@ -3,11 +3,12 @@
  * Fixed version - uploads images to server API
  */
 
-// Auth guard
-authService.requireAuth();
+// Auth guard - wrapped in async IIFE
+(async function initializePage() {
+    await authService.requireAuth();
 
-// State
-const selectedColors = new Set();
+    // State
+    const selectedColors = new Set();
 const colorPalette = [
     { name: 'Red', hex: '#FF0000' },
     { name: 'Blue', hex: '#0000FF' },
@@ -704,7 +705,9 @@ async function editProductById(productId) {
             alert('Product not found');
         }
     } catch (error) {
+        console.error('Failed to load product:', error);
         alert('Failed to load product: ' + error.message);
+        // If it's an auth error, the data-service will handle redirect
     }
 }
 
@@ -717,3 +720,5 @@ window.loadProducts = loadProducts;
 // Initialize
 loadCategoryDropdown();
 loadProducts();
+
+})(); // End of async IIFE

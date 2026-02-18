@@ -80,12 +80,26 @@ const authService = {
     },
 
     // Require authentication - redirect if not logged in
-    requireAuth() {
+    // FIX: Added server-side token verification on page load
+    async requireAuth() {
         if (!this.isAuthenticated()) {
             window.location.href = 'index.html';
             return false;
         }
-        return true;
+
+        // Verify token with server to ensure it's still valid
+        try {
+            const isValid = await this.verifyToken();
+            if (!isValid) {
+                window.location.href = 'index.html';
+                return false;
+            }
+            return true;
+        } catch (error) {
+            console.error('Token verification failed:', error);
+            window.location.href = 'index.html';
+            return false;
+        }
     },
 
     // Verify token with server
