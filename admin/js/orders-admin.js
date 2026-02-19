@@ -9,56 +9,56 @@
 
     // Load user info
     const user = authService.getCurrentUser();
-if (user) {
-    document.getElementById('userName').textContent = user.email.split('@')[0];
-}
-
-// Logout handler
-document.getElementById('logoutBtn').addEventListener('click', () => {
-    authService.logout();
-});
-
-// Modal elements
-const modal = document.getElementById('orderModal');
-document.getElementById('closeModal').addEventListener('click', closeModal);
-document.getElementById('closeDetailsBtn').addEventListener('click', closeModal);
-
-// Filter handler
-document.getElementById('statusFilter').addEventListener('change', loadOrders);
-
-// Prevent XSS in admin templates
-function escapeHtml(str) {
-    if (!str) return '';
-    return str.toString()
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
-// Close modal
-function closeModal() {
-    modal.classList.remove('show');
-}
-
-// Update order status - FIXED with async/await
-async function updateOrderStatus(orderId, newStatus) {
-    try {
-        await dataService.updateOrderStatus(orderId, newStatus);
-        await loadOrders();
-    } catch (error) {
-        alert(error.message);
+    if (user) {
+        document.getElementById('userName').textContent = user.email.split('@')[0];
     }
-}
 
-// View order details
-function viewOrderDetails(order) {
-    const container = document.getElementById('orderDetailsContainer');
-    const orderId = order.id;
-    const orderStatus = order.orderStatus || order.order_status || 'Pending';
+    // Logout handler
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        authService.logout();
+    });
 
-    container.innerHTML = `
+    // Modal elements
+    const modal = document.getElementById('orderModal');
+    document.getElementById('closeModal').addEventListener('click', closeModal);
+    document.getElementById('closeDetailsBtn').addEventListener('click', closeModal);
+
+    // Filter handler
+    document.getElementById('statusFilter').addEventListener('change', loadOrders);
+
+    // Prevent XSS in admin templates
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.toString()
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    // Close modal
+    function closeModal() {
+        modal.classList.remove('show');
+    }
+
+    // Update order status - FIXED with async/await
+    async function updateOrderStatus(orderId, newStatus) {
+        try {
+            await dataService.updateOrderStatus(orderId, newStatus);
+            await loadOrders();
+        } catch (error) {
+            alert(error.message);
+        }
+    }
+
+    // View order details
+    function viewOrderDetails(order) {
+        const container = document.getElementById('orderDetailsContainer');
+        const orderId = order.id;
+        const orderStatus = order.orderStatus || order.order_status || 'Pending';
+
+        container.innerHTML = `
         <div style="margin-bottom: 1.5rem;">
             <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">Order Information</h4>
             <div style="display: grid; grid-template-columns: 150px 1fr; gap: 0.5rem; font-size: 14px;">
@@ -129,53 +129,53 @@ function viewOrderDetails(order) {
         </div>
     `;
 
-    modal.classList.add('show');
-}
-
-// Format address
-function formatAddress(address) {
-    if (!address || Object.keys(address).length === 0) {
-        return 'N/A';
+        modal.classList.add('show');
     }
 
-    const parts = [
-        address.street || address.addressLine1,
-        address.city,
-        address.state,
-        address.zip || address.zipCode || address.pincode,
-        address.country
-    ].filter(part => part);
-
-    return parts.join(', ') || 'N/A';
-}
-
-// Load orders table - FIXED with async/await
-async function loadOrders() {
-    const statusFilter = document.getElementById('statusFilter').value;
-    const container = document.getElementById('ordersTableContainer');
-
-    try {
-        let orders = await dataService.getOrders();
-
-        // Apply filter
-        if (statusFilter !== 'All') {
-            orders = orders.filter(order => (order.orderStatus || order.status) === statusFilter);
+    // Format address
+    function formatAddress(address) {
+        if (!address || Object.keys(address).length === 0) {
+            return 'N/A';
         }
 
-        // Sort by date (newest first)
-        orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        const parts = [
+            address.street || address.addressLine1,
+            address.city,
+            address.state,
+            address.zip || address.zipCode || address.pincode,
+            address.country
+        ].filter(part => part);
 
-        if (orders.length === 0) {
-            container.innerHTML = `
+        return parts.join(', ') || 'N/A';
+    }
+
+    // Load orders table - FIXED with async/await
+    async function loadOrders() {
+        const statusFilter = document.getElementById('statusFilter').value;
+        const container = document.getElementById('ordersTableContainer');
+
+        try {
+            let orders = await dataService.getOrders();
+
+            // Apply filter
+            if (statusFilter !== 'All') {
+                orders = orders.filter(order => (order.orderStatus || order.status) === statusFilter);
+            }
+
+            // Sort by date (newest first)
+            orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            if (orders.length === 0) {
+                container.innerHTML = `
                 <div class="empty-state">
                     <div class="empty-state-icon">🛒</div>
                     <div class="empty-state-text">No orders found</div>
                 </div>
             `;
-            return;
-        }
+                return;
+            }
 
-        const tableHTML = `
+            const tableHTML = `
             <div class="table-container">
                 <table>
                     <thead>
@@ -192,24 +192,24 @@ async function loadOrders() {
                     </thead>
                     <tbody>
                         ${orders.map(order => {
-            const orderId = order.id;
-            const orderStatus = order.orderStatus || order.order_status || 'Pending';
-            const customerName = order.customerInfo?.name || order.customer_name || 'N/A';
-            const customerEmail = order.customerInfo?.email || order.customer_email || 'N/A';
+                const orderId = order.id;
+                const orderStatus = order.orderStatus || order.order_status || 'Pending';
+                const customerName = order.customerInfo?.name || order.customer_name || 'N/A';
+                const customerEmail = order.customerInfo?.email || order.customer_email || 'N/A';
 
-            return `
+                return `
                             <tr>
                                 <td><strong>${escapeHtml(order.orderNumber || orderId)}</strong></td>
                                 <td>${escapeHtml(customerName)}</td>
                                 <td>${escapeHtml(customerEmail)}</td>
-                                <td>${order.items.length} item(s)</td>
+                                <td>${order.itemCount || order.items.length} item(s)</td>
                                 <td><strong>₹${order.totalAmount.toLocaleString()}</strong></td>
                                 <td>
                                     <span class="badge ${orderStatus === 'Delivered' ? 'badge-success' :
-                    orderStatus === 'Shipped' ? 'badge-warning' :
-                        orderStatus === 'Cancelled' ? 'badge-danger' :
-                            'badge-primary'
-                }">
+                        orderStatus === 'Shipped' ? 'badge-warning' :
+                            orderStatus === 'Cancelled' ? 'badge-danger' :
+                                'badge-primary'
+                    }">
                                         ${orderStatus}
                                     </span>
                                 </td>
@@ -221,16 +221,16 @@ async function loadOrders() {
                                 </td>
                             </tr>
                         `;
-        }).join('')}
+            }).join('')}
                     </tbody>
                 </table>
             </div>
         `;
 
-        container.innerHTML = tableHTML;
-    } catch (error) {
-        console.error('Error loading orders:', error);
-        container.innerHTML = `
+            container.innerHTML = tableHTML;
+        } catch (error) {
+            console.error('Error loading orders:', error);
+            container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">⚠️</div>
                 <div class="empty-state-text">Failed to load orders</div>
@@ -238,30 +238,57 @@ async function loadOrders() {
                 <button class="btn btn-primary mt-1" onclick="loadOrders()">Retry</button>
             </div>
         `;
-    }
-}
-
-// View order by ID (fetch fresh data)
-async function viewOrderById(orderId) {
-    try {
-        const order = await dataService.getOrderById(orderId);
-        if (order) {
-            viewOrderDetails(order);
-        } else {
-            alert('Order not found');
         }
-    } catch (error) {
-        alert('Failed to load order: ' + error.message);
     }
-}
 
-// Make functions globally accessible
-window.viewOrderDetails = viewOrderDetails;
-window.viewOrderById = viewOrderById;
-window.updateOrderStatus = updateOrderStatus;
-window.loadOrders = loadOrders;
+    // View order by ID (fetch fresh data)
+    async function viewOrderById(orderId) {
+        const container = document.getElementById('orderDetailsContainer');
 
-// Initialize
-loadOrders();
+        // Show loading state
+        container.innerHTML = `
+        <div style="text-align: center; padding: 2rem;">
+            <div style="font-size: 2rem; margin-bottom: 1rem;">⏳</div>
+            <div>Loading order details...</div>
+        </div>
+    `;
+        modal.classList.add('show');
+
+        try {
+            console.log('Fetching order:', orderId);
+            const order = await dataService.getOrderById(orderId);
+            console.log('Order data received:', order);
+
+            if (order) {
+                viewOrderDetails(order);
+            } else {
+                container.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: var(--danger);">
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">⚠️</div>
+                    <div>Order not found</div>
+                </div>
+            `;
+            }
+        } catch (error) {
+            console.error('Failed to load order:', error);
+            container.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: var(--danger);">
+                <div style="font-size: 2rem; margin-bottom: 1rem;">❌</div>
+                <div style="margin-bottom: 1rem;">Failed to load order details</div>
+                <div style="font-size: 0.9rem; color: var(--text-secondary);">${escapeHtml(error.message)}</div>
+                <button class="btn btn-primary mt-1" onclick="viewOrderById('${orderId}')">Retry</button>
+            </div>
+        `;
+        }
+    }
+
+    // Make functions globally accessible
+    window.viewOrderDetails = viewOrderDetails;
+    window.viewOrderById = viewOrderById;
+    window.updateOrderStatus = updateOrderStatus;
+    window.loadOrders = loadOrders;
+
+    // Initialize
+    loadOrders();
 
 })(); // End of async IIFE

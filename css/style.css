@@ -177,7 +177,7 @@ header.navbar {
     text-decoration: none;
     position: relative;
     padding-bottom: 2px;
-    transition: var(--transition-quick);
+    /* transition: var(--transition-quick); */
     white-space: nowrap;
 }
 
@@ -214,37 +214,71 @@ header.navbar {
 .nav-item .dropdown-menu {
     display: none;
     position: absolute;
-    top: calc(100% + 12px);
+    top: 100%;
     left: 0;
+    margin-top: 0;
+    /* No gap */
     background: var(--color-white);
     border: 1px solid var(--color-border);
-    border-radius: 6px;
+    border-radius: 0 0 6px 6px;
     box-shadow: var(--shadow-medium);
-    min-width: 160px;
+    min-width: 200px;
     padding: 0.5rem 0;
-    z-index: 200;
+    z-index: 9999;
 }
 
 .nav-item:hover .dropdown-menu {
     display: block;
 }
 
-.nav-item .dropdown-menu a {
+/* Recursive Submenu (Nested) */
+.dropdown-submenu {
+    position: relative;
+    width: 100%;
+}
+
+/* Submenu Content */
+.dropdown-submenu-content {
+    display: none;
+    position: absolute;
+    left: 100%;
+    /* Fly out to the right */
+    top: 0;
+    margin-top: -1px;
+    /* Align border perfectly */
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    box-shadow: var(--shadow-medium);
+    min-width: 200px;
+    padding: 0.5rem 0;
+    z-index: 9999;
+}
+
+/* Show Submenu on Hover */
+.dropdown-submenu:hover>.dropdown-submenu-content {
     display: block;
+}
+
+/* Link Styling */
+.dropdown-menu a,
+.dropdown-submenu a,
+.dropdown-child {
+    display: block;
+    width: 100%;
     padding: 0.6rem 1.25rem;
     font-size: 0.8125rem;
     font-weight: 500;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--color-text);
-    transition: var(--transition-quick);
+    transition: background-color 0.2s;
+    background: transparent;
 }
 
-.nav-item .dropdown-menu a::after {
-    display: none;
-}
-
-.nav-item .dropdown-menu a:hover {
+.dropdown-menu a:hover,
+.dropdown-submenu a:hover,
+.dropdown-child:hover {
     background: var(--color-background);
     color: var(--color-accent);
 }

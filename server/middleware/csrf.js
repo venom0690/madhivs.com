@@ -73,17 +73,19 @@ exports.verifyCsrfToken = (req, res, next) => {
         });
     }
 
-    // Optional: Verify IP matches (stricter security)
-    const currentIp = req.ip || req.connection.remoteAddress;
-    if (tokenData.ip !== currentIp) {
+    // Check if token is expired (24 hours)
+    const now = Date.now();
+    if (now - tokenData.created > 24 * 60 * 60 * 1000) {
+        csrfTokens.delete(token);
         return res.status(403).json({
             status: 'error',
-            message: 'CSRF token IP mismatch'
+            message: 'CSRF token expired'
         });
     }
 
-    // Token is valid, delete it (one-time use)
-    csrfTokens.delete(token);
+    // Token is valid - DO NOT delete it (reusable for session)
+    // Update last used time
+    tokenData.lastUsed = now;
     
     next();
 };

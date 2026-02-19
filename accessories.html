@@ -149,34 +149,13 @@
         </div>
     </footer>
 
+    <script src="js/products.js"></script>
+    <script src="js/admin-data-bridge.js"></script>
+    <script src="js/accessories-products-loader.js"></script>
     <script src="js/wishlist.js"></script>
     <script src="js/search.js"></script>
     <script src="js/hamburger.js"></script>
-    <script>
-        // Filter functionality
-        const filterButtons = document.querySelectorAll('.filter-btn');
-        const productCards = document.querySelectorAll('.product-card');
-
-        filterButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                // Remove active class from all buttons
-                filterButtons.forEach(btn => btn.classList.remove('active'));
-                // Add active class to clicked button
-                button.classList.add('active');
-
-                const category = button.getAttribute('data-category');
-
-                // Filter products
-                productCards.forEach(card => {
-                    if (category === 'all' || card.getAttribute('data-category') === category) {
-                        card.style.display = 'block';
-                    } else {
-                        card.style.display = 'none';
-                    }
-                });
-            });
-        });
-    </script>
+    <script src="js/filters.js"></script>
     <script src="js/navbar-categories.js"></script>
 </body>
 

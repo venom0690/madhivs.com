@@ -9,22 +9,41 @@ const dataService = (function () {
 
     const API_BASE = window.location.origin + '/api';
     let csrfToken = null;
+    let tokenFetchPromise = null;
 
     /**
      * Get CSRF token from server
+     * Fetches once and caches for the session
      */
-    async function getCsrfToken() {
-        if (csrfToken) return csrfToken;
-        
-        try {
-            const response = await fetch(`${API_BASE}/csrf-token`);
-            const data = await response.json();
-            csrfToken = data.csrfToken;
-            return csrfToken;
-        } catch (error) {
-            console.error('Failed to get CSRF token:', error);
-            return null;
+    async function getCsrfToken(forceRefresh = false) {
+        // If forcing refresh, clear cached token
+        if (forceRefresh) {
+            csrfToken = null;
+            tokenFetchPromise = null;
         }
+
+        // Return cached token if available
+        if (csrfToken) return csrfToken;
+
+        // If already fetching, wait for that promise
+        if (tokenFetchPromise) return tokenFetchPromise;
+
+        // Fetch new token
+        tokenFetchPromise = (async () => {
+            try {
+                const response = await fetch(`${API_BASE}/csrf-token`);
+                const data = await response.json();
+                csrfToken = data.csrfToken;
+                tokenFetchPromise = null;
+                return csrfToken;
+            } catch (error) {
+                console.error('Failed to get CSRF token:', error);
+                tokenFetchPromise = null;
+                return null;
+            }
+        })();
+
+        return tokenFetchPromise;
     }
 
     /**
@@ -73,8 +92,14 @@ const dataService = (function () {
         if (!response.ok) {
             // If CSRF token is invalid, refresh it and retry once
             if (response.status === 403 && data.message && data.message.includes('CSRF')) {
-                csrfToken = null; // Clear cached token
-                // Don't retry automatically to avoid infinite loops
+                console.warn('CSRF token invalid, refreshing...');
+                await getCsrfToken(true); // Force refresh
+
+                // Retry the request once with new token
+                if (!options._retried) {
+                    options._retried = true;
+                    return _request(endpoint, options);
+                }
             }
             throw new Error(data.message || `Request failed (${response.status})`);
         }
@@ -218,8 +243,9 @@ const dataService = (function () {
                 email: order.customer_email,
                 phone: order.customer_phone
             },
-            // items array is NOT included in list endpoint, only item_count
-            items: order.items || Array(order.item_count || 0).fill({ name: '-', price: 0, quantity: 1 }),
+            // List endpoint only returns item_count, not full items array
+            itemCount: order.item_count || 0,
+            items: [],
             createdAt: order.created_at
         }));
     }

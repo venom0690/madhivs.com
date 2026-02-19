@@ -38,7 +38,8 @@ app.use(helmet({
         directives: {
             defaultSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-            scriptSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline needed for inline scripts
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // unsafe-inline needed for inline scripts
+            scriptSrcAttr: ["'unsafe-inline'"], // needed for inline event handlers (onclick, etc.)
             imgSrc: ["'self'", "data:", "https:", "http:"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             connectSrc: ["'self'"],
