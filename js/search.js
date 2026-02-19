@@ -16,11 +16,11 @@ async function handleIndexPageSearch(searchInput) {
     const womenKeywords = ['saree', 'lehenga', 'suit', 'anarkali', 'women', 'palazzo', 'georgette', 'kanjivaram', 'chanderi'];
     const menKeywords = ['kurta', 'sherwani', 'jacket', 'men', 'nehru', 'bandhgala'];
 
-    // Load dynamic keywords from AdminDataBridge if available
+    // Load dynamic keywords from API if available
     let dynamicKeywords = [];
-    if (typeof AdminDataBridge !== 'undefined') {
+    if (typeof ProductService !== 'undefined') {
         try {
-            dynamicKeywords = await AdminDataBridge.getKeywords();
+            dynamicKeywords = await ProductService.getKeywords();
         } catch (e) {
             console.error('Failed to load dynamic keywords:', e);
         }
@@ -41,7 +41,7 @@ async function handleIndexPageSearch(searchInput) {
                 // Priority A: Linked Categories
                 if (match.linkedCategories && match.linkedCategories.length > 0) {
                     const categoryId = match.linkedCategories[0]; // Take first one
-                    const category = await AdminDataBridge.getCategoryById(categoryId);
+                    const category = await ProductService.getCategory(categoryId);
                     if (category) {
                         let baseUrl = 'shop.html';
                         if (category.type === 'Men') baseUrl = 'men.html';

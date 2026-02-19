@@ -16,22 +16,21 @@ document.addEventListener('DOMContentLoaded', async function () {
         return src;
     }
 
-    // Try to find product in Admin Data to get dynamic attributes
+    // Fetch product details from API
     let productData = null;
-    if (typeof AdminDataBridge !== 'undefined' && await AdminDataBridge.hasData()) {
+    try {
         if (productId) {
-            // Prefer finding by ID
-            const rawProduct = await AdminDataBridge.getProductById(productId);
-            if (rawProduct) {
-                productData = AdminDataBridge.transformProduct(rawProduct);
+            productData = await ProductService.getProduct(productId);
+        } else if (productName) {
+            // If no ID, try to find by name (search)
+            const searchResults = await ProductService.search(productName);
+            if (searchResults && searchResults.length > 0) {
+                // Try to find exact match or take first
+                productData = searchResults.find(p => p.name === productName) || searchResults[0];
             }
         }
-
-        // Fallback to name search if ID didn't work or wasn't provided
-        if (!productData) {
-            const products = await AdminDataBridge.getWebsiteProducts();
-            productData = products.find(p => p.name === productName);
-        }
+    } catch (error) {
+        console.error('Error fetching product details:', error);
     }
 
     // Set product information

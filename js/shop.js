@@ -18,13 +18,12 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Fetch all products
     let allProducts = [];
     try {
-        // getAllProducts is defined in products.js, which uses AdminDataBridge if available
-        if (typeof getAllProducts === 'function') {
-            const products = await getAllProducts();
-            // Transform to standardized format if needed, but products.js/bridge usually does it
+        // Use ProductService (new API based approach)
+        if (typeof ProductService !== 'undefined') {
+            const products = await ProductService.getProducts();
             allProducts = products;
         } else {
-            console.error('getAllProducts function not found. Make sure products.js is loaded.');
+            console.error('ProductService not found. Make sure products.js is loaded.');
             productGrid.innerHTML = '<p>Error loading products.</p>';
             return;
         }

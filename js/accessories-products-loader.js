@@ -13,10 +13,9 @@
             return; // Not on accessories page
         }
 
-        // Check if we should use admin data
-        if (typeof AdminDataBridge === 'undefined' || !(await AdminDataBridge.hasData())) {
-            // No admin data, keep hardcoded HTML products
-            console.log('Using hardcoded products (no admin data)');
+        // Check if ProductService is available
+        if (typeof ProductService === 'undefined') {
+            console.error('ProductService not found');
             return;
         }
 
@@ -24,7 +23,7 @@
         const accessoriesProducts = await getAccessoriesProducts();
 
         if (!accessoriesProducts || accessoriesProducts.length === 0) {
-            console.log('No accessories products found in admin panel, keeping hardcoded');
+            // No products found
             return;
         }
 
@@ -42,7 +41,7 @@
             initializeWishlistHearts();
         }
 
-        console.log(`Loaded ${accessoriesProducts.length} products from admin panel`);
+
     });
 
     /**
@@ -53,41 +52,41 @@
         try {
             // Get all products and categories
             const [products, categories] = await Promise.all([
-                AdminDataBridge.getProducts(),
-                AdminDataBridge.getCategories()
+                ProductService.getProducts(),
+                ProductService.getCategories()
             ]);
 
             // Find accessories category (case-insensitive)
-            const accessoriesCategory = categories.find(cat => 
-                cat.name.toLowerCase().includes('accessories') || 
+            const accessoriesCategory = categories.find(cat =>
+                cat.name.toLowerCase().includes('accessories') ||
                 cat.name.toLowerCase().includes('accessory')
             );
 
             if (accessoriesCategory) {
                 // Filter products by accessories category
-                const categoryProducts = products.filter(p => 
+                const categoryProducts = products.filter(p =>
                     p.category_id === accessoriesCategory.id
                 );
-                
+
                 if (categoryProducts.length > 0) {
-                    return categoryProducts.map(AdminDataBridge.transformProduct);
+                    return categoryProducts;
                 }
             }
 
             // Fallback: look for products with accessories-related keywords
-            const accessoriesKeywords = ['bag', 'jewelry', 'jewellery', 'necklace', 'bracelet', 
-                                        'earring', 'ring', 'watch', 'belt', 'scarf', 'sunglasses',
-                                        'handbag', 'purse', 'wallet', 'clutch'];
-            
+            const accessoriesKeywords = ['bag', 'jewelry', 'jewellery', 'necklace', 'bracelet',
+                'earring', 'ring', 'watch', 'belt', 'scarf', 'sunglasses',
+                'handbag', 'purse', 'wallet', 'clutch'];
+
             const keywordProducts = products.filter(p => {
                 const name = (p.name || '').toLowerCase();
                 const desc = (p.description || '').toLowerCase();
-                return accessoriesKeywords.some(keyword => 
+                return accessoriesKeywords.some(keyword =>
                     name.includes(keyword) || desc.includes(keyword)
                 );
             });
 
-            return keywordProducts.map(AdminDataBridge.transformProduct);
+            return keywordProducts;
         } catch (error) {
             console.error('Error loading accessories products:', error);
             return [];

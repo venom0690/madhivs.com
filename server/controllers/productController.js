@@ -25,15 +25,41 @@ exports.getAllProducts = async (req, res) => {
             page
         } = req.query;
 
-        let query = 'SELECT * FROM products WHERE 1=1';
-        let countQuery = 'SELECT COUNT(*) as total FROM products WHERE 1=1';
+        // FIX #17: Join with categories to get name/slug/type for frontend mapping
+        let query = `
+            SELECT p.*,
+                   c.name as category_name,
+                   c.slug as category_slug,
+                   c.type as category_type
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE 1=1
+        `;
+
+        // Alias products as p for count query too, so SHARED WHERE clauses work
+        let countQuery = 'SELECT COUNT(*) as total FROM products p WHERE 1=1';
+
         const params = [];
         const countParams = [];
 
         // FIX #2: Validate category ID is numeric before using
         if (category) {
-            const categoryIdNum = parseInt(category);
-            if (isNaN(categoryIdNum) || categoryIdNum < 1) {
+            let categoryIdNum = parseInt(category);
+
+            // FIX #18: Resolve slug if category is not a number
+            if (isNaN(categoryIdNum)) {
+                const [catRows] = await db.query('SELECT id FROM categories WHERE slug = ?', [category]);
+                if (catRows.length > 0) {
+                    categoryIdNum = catRows[0].id;
+                } else {
+                    return res.status(404).json({
+                        status: 'error',
+                        message: 'Category not found'
+                    });
+                }
+            }
+
+            if (categoryIdNum < 1) {
                 return res.status(400).json({
                     status: 'error',
                     message: 'Invalid category ID'
@@ -47,7 +73,8 @@ exports.getAllProducts = async (req, res) => {
 
             if (validIds.length > 0) {
                 const placeholders = validIds.map(() => '?').join(',');
-                const clause = ` AND (category_id IN (${placeholders}) OR subcategory_id IN (${placeholders}))`;
+                // Qualify columns with p.
+                const clause = ` AND (p.category_id IN (${placeholders}) OR p.subcategory_id IN (${placeholders}))`;
                 query += clause;
                 countQuery += clause;
                 params.push(...validIds, ...validIds);
@@ -66,55 +93,55 @@ exports.getAllProducts = async (req, res) => {
                     message: 'Invalid subcategory ID'
                 });
             }
-            query += ' AND subcategory_id = ?';
-            countQuery += ' AND subcategory_id = ?';
+            query += ' AND p.subcategory_id = ?';
+            countQuery += ' AND p.subcategory_id = ?';
             params.push(subIdNum);
             countParams.push(subIdNum);
         }
 
         if (trending === 'true') {
-            query += ' AND is_trending = 1';
-            countQuery += ' AND is_trending = 1';
+            query += ' AND p.is_trending = 1';
+            countQuery += ' AND p.is_trending = 1';
         }
 
         if (popular === 'true') {
-            query += ' AND is_popular = 1';
-            countQuery += ' AND is_popular = 1';
+            query += ' AND p.is_popular = 1';
+            countQuery += ' AND p.is_popular = 1';
         }
 
         if (featured === 'true') {
-            query += ' AND is_featured = 1';
-            countQuery += ' AND is_featured = 1';
+            query += ' AND p.is_featured = 1';
+            countQuery += ' AND p.is_featured = 1';
         }
 
         if (men === 'true') {
-            query += ' AND is_men_collection = 1';
-            countQuery += ' AND is_men_collection = 1';
+            query += ' AND p.is_men_collection = 1';
+            countQuery += ' AND p.is_men_collection = 1';
         }
 
         if (women === 'true') {
-            query += ' AND is_women_collection = 1';
-            countQuery += ' AND is_women_collection = 1';
+            query += ' AND p.is_women_collection = 1';
+            countQuery += ' AND p.is_women_collection = 1';
         }
 
         if (search) {
-            // Limit search term length to prevent abuse
+            // Limit search term length
             const sanitizedSearch = search.toString().substring(0, 200);
-            query += ' AND (name LIKE ? OR description LIKE ?)';
-            countQuery += ' AND (name LIKE ? OR description LIKE ?)';
+            query += ' AND (p.name LIKE ? OR p.description LIKE ?)';
+            countQuery += ' AND (p.name LIKE ? OR p.description LIKE ?)';
             const searchTerm = `%${sanitizedSearch}%`;
             params.push(searchTerm, searchTerm);
             countParams.push(searchTerm, searchTerm);
         }
 
-        query += ' ORDER BY created_at DESC';
+        query += ' ORDER BY p.created_at DESC';
 
         // FIX #11: Pagination
         const pageNum = Math.max(1, parseInt(page) || 1);
-        const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 20)); // Cap at 100
+        const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 20));
         const offset = (pageNum - 1) * limitNum;
 
-        // Get total count for pagination metadata
+        // Get total count
         const [countResult] = await db.query(countQuery, countParams);
         const total = countResult[0].total;
 
@@ -197,6 +224,7 @@ exports.getProduct = async (req, res) => {
         let query = `
             SELECT p.*, 
                    c.name as category_name, 
+                   c.slug as category_slug,
                    c.type as category_type,
                    sc.name as subcategory_name
             FROM products p 

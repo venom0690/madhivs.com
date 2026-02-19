@@ -554,18 +554,19 @@
             const productData = {
                 name: productName,
                 price: productPrice,
-                category: productCategory,
+                category: productCategory, // Changed from category_id to category for data-service mapping
                 subcategory_id: productSubCategory,
                 stock: productStock,
                 description: productDescription,
                 sizes: hasSizesCheckbox.checked ? sizes : [],
                 colors: hasColorsCheckbox.checked ? colors : [],
-                primaryImage: primaryImage,
+                primaryImage: primaryImage, // Changed to camelCase for data-service mapping
                 images: subImageUrls,
-                isTrending: isTrendingInput.checked,
-                isPopular: isPopularInput.checked,
-                isMenCollection: isMenCollectionInput.checked,
-                isWomenCollection: isWomenCollectionInput.checked
+                isTrending: isTrendingInput.checked, // Changed to camelCase for data-service mapping
+                isPopular: isPopularInput.checked,   // Changed to camelCase for data-service mapping
+                isFeatured: false, // Default
+                isMenCollection: isMenCollectionInput.checked, // Changed to camelCase for data-service mapping
+                isWomenCollection: isWomenCollectionInput.checked // Changed to camelCase for data-service mapping
             };
 
             if (productId) {

@@ -151,6 +151,19 @@ exports.createOrder = async (req, res) => {
             );
         }
 
+        // FIX #19: Fetch dynamic shipping cost
+        let shippingCost = 99; // Fallback
+        try {
+            const [settings] = await connection.query('SELECT setting_value FROM settings WHERE setting_key = "shipping_cost"');
+            if (settings.length > 0) {
+                shippingCost = parseFloat(settings[0].setting_value);
+            }
+        } catch (err) {
+            console.error('Failed to fetch shipping cost, using default:', err);
+        }
+
+        const totalAmount = calculatedTotal + shippingCost;
+
         // FIX #14: Generate unique order number with retry logic
         let orderNumber;
         let attempts = 0;

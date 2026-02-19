@@ -1,6 +1,6 @@
 /**
  * Dynamic Product Loader for Men's Collection Page
- * Replaces hardcoded products with admin panel data
+ * Replaces hardcoded products with API data
  */
 
 (function () {
@@ -9,47 +9,62 @@
     document.addEventListener('DOMContentLoaded', async function () {
         const productGrid = document.getElementById('productGrid');
 
-        if (!productGrid) {
-            return; // Not on men's page
+        if (!productGrid) return;
+
+        // Show loading state
+        productGrid.innerHTML = '<div class="loading-spinner">Loading products...</div>';
+
+        try {
+            // Load products from API
+            const menProducts = await ProductService.getMen();
+
+            if (!menProducts || menProducts.length === 0) {
+                productGrid.innerHTML = '<div class="no-products">No products found in Men\'s collection.</div>';
+                return;
+            }
+
+            // Clear loading state
+            productGrid.innerHTML = '';
+
+            // Create product cards
+            menProducts.forEach(product => {
+                const card = createProductCard(product);
+                productGrid.appendChild(card);
+            });
+
+            // Re-initialize wishlist hearts
+            if (typeof initializeWishlistHearts === 'function') {
+                initializeWishlistHearts();
+            }
+
+            // Lazy load images
+            const lazyImages = productGrid.querySelectorAll('img[loading="lazy"]');
+            if ('IntersectionObserver' in window) {
+                const imageObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target;
+                            img.src = img.dataset.src;
+                            img.classList.remove('lazy');
+                            observer.unobserve(img);
+                        }
+                    });
+                });
+                lazyImages.forEach(img => imageObserver.observe(img));
+            } else {
+                lazyImages.forEach(img => img.src = img.dataset.src);
+            }
+
+        } catch (error) {
+            console.error('Error loading men\'s products:', error);
+            productGrid.innerHTML = '<div class="error-message">Failed to load products. Please try again later.</div>';
         }
-
-        // Check if we should use admin data
-        if (typeof AdminDataBridge === 'undefined' || !(await AdminDataBridge.hasData())) {
-            // No admin data, keep hardcoded HTML products
-            console.log('Using hardcoded products (no admin data)');
-            return;
-        }
-
-        // Load products from admin panel (async)
-        const menProducts = await getMenProducts();
-
-        if (!menProducts || menProducts.length === 0) {
-            console.log('No men\'s products found in admin panel, keeping hardcoded');
-            return;
-        }
-
-        // Clear existing hardcoded products
-        productGrid.innerHTML = '';
-
-        // Create product cards from admin data
-        menProducts.forEach(product => {
-            const card = createProductCard(product);
-            productGrid.appendChild(card);
-        });
-
-        // Re-initialize wishlist hearts
-        if (typeof initializeWishlistHearts === 'function') {
-            initializeWishlistHearts();
-        }
-
-        console.log(`Loaded ${menProducts.length} products from admin panel`);
     });
 
     // Helper to prevent XSS
     function escapeHtml(text) {
         if (!text) return '';
-        return text
-            .toString()
+        return text.toString()
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
@@ -63,34 +78,42 @@
      * @returns {HTMLElement} Product card element
      */
     function createProductCard(product) {
-        const productLink = `product.html?id=${product.id}&name=${encodeURIComponent(product.name)}&price=${product.price}&image=${encodeURIComponent(product.image)}`;
-        const imageUrl = typeof getImageUrl === 'function' ? getImageUrl(product.image, '?w=600&q=80') : product.image;
+        const productLink = `product.html?id=${product.id}`;
+        const imageUrl = product.primary_image || product.image || 'assets/images/placeholder.jpg';
+
+        // Format price
+        const priceDisplay = typeof product.price === 'number'
+            ? `₹${product.price.toLocaleString()}`
+            : product.priceFormatted || `₹${product.price}`;
 
         const card = document.createElement('a');
         card.href = productLink;
         card.className = 'product-card';
-        card.setAttribute('data-category', escapeHtml(product.category));
-
-        const safeName = escapeHtml(product.name);
-        const safePrice = escapeHtml(product.priceFormatted);
-        const safeImage = escapeHtml(imageUrl);
+        if (product.category_name) {
+            card.setAttribute('data-category', escapeHtml(product.category_name));
+        }
 
         card.innerHTML = `
             <div class="product-images">
                 <button class="wishlist-heart" 
-                    data-product-name="${safeName}"
-                    data-product-price="${safePrice}"
-                    data-product-image="${safeImage}"
+                    data-product-id="${product.id}"
+                    data-product-name="${escapeHtml(product.name)}"
+                    data-product-price="${escapeHtml(priceDisplay)}"
+                    data-product-image="${escapeHtml(imageUrl)}"
                     data-product-link="${productLink}">
-                    ❤️
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                    </svg>
                 </button>
                 <img class="main-image" 
-                    src="${safeImage}" 
-                    alt="${safeName}">
+                    src="assets/images/placeholder.jpg"
+                    data-src="${escapeHtml(imageUrl)}" 
+                    alt="${escapeHtml(product.name)}"
+                    loading="lazy">
             </div>
             <div class="product-info">
-                <h3 class="product-name">${safeName}</h3>
-                <p class="product-price">${safePrice}</p>
+                <h3 class="product-name">${escapeHtml(product.name)}</h3>
+                <p class="product-price">${escapeHtml(priceDisplay)}</p>
             </div>
         `;
 

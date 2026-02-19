@@ -6,26 +6,67 @@
 (function () {
     'use strict';
 
-    // Wait for DOM to be fully loaded
     document.addEventListener('DOMContentLoaded', async function () {
-        // Check if we're on the index page
         const popularContainer = document.getElementById('popularProducts');
         const trendingContainer = document.getElementById('trendingProducts');
 
-        if (!popularContainer || !trendingContainer) {
-            return; // Not on the index page
-        }
+        if (!popularContainer || !trendingContainer) return;
 
         /**
          * Create a product card element
-         * @param {Object} product - Product data object
-         * @returns {HTMLElement} Product card element
          */
-        // Helper to prevent XSS
+        function createProductCard(product) {
+            // Encode URI components for safety
+            const nameEnc = encodeURIComponent(product.name);
+            const priceEnc = product.price; // Passed as raw number usually
+            const imageEnc = encodeURIComponent(product.primary_image || product.image);
+
+            const productLink = `product.html?id=${product.id}`;
+            const imageUrl = product.primary_image || product.image || 'assets/images/placeholder.jpg';
+
+            // Format price if needed
+            const priceDisplay = typeof product.price === 'number'
+                ? `₹${product.price.toLocaleString()}`
+                : product.priceFormatted || `₹${product.price}`;
+
+            const card = document.createElement('a');
+            card.href = productLink;
+            card.className = 'product-card';
+            if (product.category_name) {
+                card.setAttribute('data-category', product.category_name);
+            }
+
+            card.innerHTML = `
+                <div class="product-images">
+                    <button class="wishlist-heart" 
+                        data-product-id="${product.id}"
+                        data-product-name="${escapeHtml(product.name)}"
+                        data-product-price="${escapeHtml(priceDisplay)}"
+                        data-product-image="${escapeHtml(imageUrl)}"
+                        data-product-link="${productLink}">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                        </svg>
+                    </button>
+                    <img class="main-image" 
+                        src="assets/images/placeholder.jpg"
+                        data-src="${escapeHtml(imageUrl)}" 
+                        alt="${escapeHtml(product.name)}"
+                        loading="lazy">
+                </div>
+                <div class="product-info">
+                    <h3 class="product-name">${escapeHtml(product.name)}</h3>
+                    <p class="product-price">${escapeHtml(priceDisplay)}</p>
+                </div>
+            `;
+
+            return card;
+        }
+
+        // XSS Helper
         function escapeHtml(text) {
             if (!text) return '';
-            return text
-                .toString()
+            return text.toString()
                 .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;")
@@ -33,81 +74,74 @@
                 .replace(/'/g, "&#039;");
         }
 
-        function createProductCard(product) {
-            const productLink = `product.html?id=${product.id}&name=${encodeURIComponent(product.name)}&price=${product.price}&image=${encodeURIComponent(product.image)}`;
-            const imageUrl = typeof getImageUrl === 'function' ? getImageUrl(product.image, '?w=600&q=80') : product.image;
-
-            const card = document.createElement('a');
-            card.href = productLink;
-            card.className = 'product-card';
-            card.setAttribute('data-category', escapeHtml(product.category));
-
-            const safeName = escapeHtml(product.name);
-            const safePrice = escapeHtml(product.priceFormatted);
-            const safeImage = escapeHtml(imageUrl);
-            // safeNameForJs not strictly needed here as we use data attributes, but good practice if used in JS
-
-            card.innerHTML = `
-                <div class="product-images">
-                    <button class="wishlist-heart" 
-                        data-product-name="${safeName}"
-                        data-product-price="${safePrice}"
-                        data-product-image="${safeImage}"
-                        data-product-link="${productLink}">
-                        ❤️
-                    </button>
-                    <img class="main-image" 
-                        src="${safeImage}" 
-                        alt="${safeName}">
-                </div>
-                <div class="product-info">
-                    <h3 class="product-name">${safeName}</h3>
-                    <p class="product-price">${safePrice}</p>
-                </div>
-            `;
-
-            return card;
-        }
-
         /**
-         * Load products into a container
-         * @param {Array} products - Array of product objects
-         * @param {HTMLElement} container - Container element
-         * @param {number} maxProducts - Maximum number of products to display
+         * Load products into container
          */
-        function loadProducts(products, container, maxProducts = 6) {
-            // Clear existing content
+        function renderProducts(products, container) {
             container.innerHTML = '';
 
-            // Limit the number of products displayed
-            const productsToShow = products.slice(0, maxProducts);
+            if (!products || products.length === 0) {
+                container.innerHTML = '<div class="no-products">No products found.</div>';
+                return;
+            }
 
-            // Create and append product cards
-            productsToShow.forEach(product => {
+            products.forEach(product => {
                 const card = createProductCard(product);
                 container.appendChild(card);
             });
 
-            // Re-initialize wishlist hearts for new cards
+            // Initialize lazy loading
+            const lazyImages = container.querySelectorAll('img[loading="lazy"]');
+            if ('IntersectionObserver' in window) {
+                const imageObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target;
+                            img.src = img.dataset.src;
+                            img.classList.remove('lazy');
+                            observer.unobserve(img);
+                        }
+                    });
+                });
+                lazyImages.forEach(img => imageObserver.observe(img));
+            } else {
+                // Fallback
+                lazyImages.forEach(img => img.src = img.dataset.src);
+            }
+
+            // Wishlist logic
             if (typeof initializeWishlistHearts === 'function') {
                 initializeWishlistHearts();
             }
+
+            // Prevent heart click default
+            container.querySelectorAll('.wishlist-heart').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Wishlist toggle logic is usually handled by `initializeWishlistHearts` or global event delegation
+                });
+            });
         }
 
-        // Load Popular Products (async)
-        const popularProducts = await getPopularProducts();
-        loadProducts(popularProducts, popularContainer, 8);
+        // Fetch Data
+        try {
+            // Show loading state
+            popularContainer.innerHTML = '<div class="loading-spinner">Loading...</div>';
+            trendingContainer.innerHTML = '<div class="loading-spinner">Loading...</div>';
 
-        // Load Trending Products (async)
-        const trendingProducts = await getTrendingProducts();
-        loadProducts(trendingProducts, trendingContainer, 8);
+            const [popularProducts, trendingProducts] = await Promise.all([
+                ProductService.getPopular(),
+                ProductService.getTrending()
+            ]);
 
-        // Add click event prevention for wishlist hearts
-        document.querySelectorAll('.wishlist-heart').forEach(heart => {
-            heart.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-            });
-        });
+            renderProducts(popularProducts, popularContainer);
+            renderProducts(trendingProducts, trendingContainer);
+
+        } catch (error) {
+            console.error('Error loading home products:', error);
+            popularContainer.innerHTML = '<div class="error-message">Failed to load products.</div>';
+            trendingContainer.innerHTML = '<div class="error-message">Failed to load products.</div>';
+        }
     });
 })();

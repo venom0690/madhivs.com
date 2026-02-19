@@ -113,6 +113,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/content', contentRoutes);
+app.use('/api/settings', require('./routes/settingsRoutes'));
 
 // CSRF token endpoint
 app.get('/api/csrf-token', getCsrfToken);
