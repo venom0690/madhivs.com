@@ -15,6 +15,7 @@ exports.getAllProducts = async (req, res) => {
         const {
             category,
             subcategory,
+            type,
             trending,
             popular,
             featured,
@@ -37,7 +38,7 @@ exports.getAllProducts = async (req, res) => {
         `;
 
         // Alias products as p for count query too, so SHARED WHERE clauses work
-        let countQuery = 'SELECT COUNT(*) as total FROM products p WHERE 1=1';
+        let countQuery = 'SELECT COUNT(p.id) as total FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE 1=1';
 
         const params = [];
         const countParams = [];
@@ -97,6 +98,13 @@ exports.getAllProducts = async (req, res) => {
             countQuery += ' AND p.subcategory_id = ?';
             params.push(subIdNum);
             countParams.push(subIdNum);
+        }
+
+        if (type) {
+            query += ' AND c.type = ?';
+            countQuery += ' AND c.type = ?';
+            params.push(type);
+            countParams.push(type);
         }
 
         if (trending === 'true') {

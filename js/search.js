@@ -60,7 +60,6 @@ async function handleIndexPageSearch(searchInput) {
                     } else {
                         // Multiple products - ideally go to shop with filter, 
                         // but for now let's fall through to general search or handle simple ID filter if shop supports it
-                        // console.log('Multiple products linked, falling back to name search');
                     }
                 }
             }

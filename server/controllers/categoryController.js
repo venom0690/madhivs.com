@@ -23,7 +23,7 @@ exports.getAllCategories = async (req, res) => {
             if (!VALID_TYPES.includes(type)) {
                 return res.status(400).json({
                     status: 'error',
-                    message: 'Type must be one of: Men, Women, General'
+                    message: 'Type must be one of: Men, Women, Accessories, General'
                 });
             }
             query += ' AND type = ?';
@@ -176,7 +176,7 @@ exports.createCategory = async (req, res) => {
         if (!type || !VALID_TYPES.includes(type)) {
             return res.status(400).json({
                 status: 'error',
-                message: 'Type must be one of: Men, Women, General'
+                message: 'Type must be one of: Men, Women, Accessories, General'
             });
         }
 
@@ -284,7 +284,7 @@ exports.updateCategory = async (req, res) => {
             if (!VALID_TYPES.includes(type)) {
                 return res.status(400).json({
                     status: 'error',
-                    message: 'Type must be one of: Men, Women, General'
+                    message: 'Type must be one of: Men, Women, Accessories, General'
                 });
             }
             updates.push('type = ?');

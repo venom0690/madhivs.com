@@ -46,48 +46,11 @@
 
     /**
      * Get accessories products from admin panel
-     * Looks for products in "Accessories" category or with accessories-related subcategories
+     * Fetches products directly using type=Accessories filter
      */
     async function getAccessoriesProducts() {
         try {
-            // Get all products and categories
-            const [products, categories] = await Promise.all([
-                ProductService.getProducts(),
-                ProductService.getCategories()
-            ]);
-
-            // Find accessories category (prioritize type, then name)
-            const accessoriesCategory = categories.find(cat =>
-                cat.type === 'Accessories' ||
-                cat.name.toLowerCase().includes('accessories') ||
-                cat.name.toLowerCase().includes('accessory')
-            );
-
-            if (accessoriesCategory) {
-                // Filter products by accessories category
-                const categoryProducts = products.filter(p =>
-                    p.category_id === accessoriesCategory.id
-                );
-
-                if (categoryProducts.length > 0) {
-                    return categoryProducts;
-                }
-            }
-
-            // Fallback: look for products with accessories-related keywords
-            const accessoriesKeywords = ['bag', 'jewelry', 'jewellery', 'necklace', 'bracelet',
-                'earring', 'ring', 'watch', 'belt', 'scarf', 'sunglasses',
-                'handbag', 'purse', 'wallet', 'clutch'];
-
-            const keywordProducts = products.filter(p => {
-                const name = (p.name || '').toLowerCase();
-                const desc = (p.description || '').toLowerCase();
-                return accessoriesKeywords.some(keyword =>
-                    name.includes(keyword) || desc.includes(keyword)
-                );
-            });
-
-            return keywordProducts;
+            return await ProductService.getProducts({ type: 'Accessories' });
         } catch (error) {
             console.error('Error loading accessories products:', error);
             return [];
