@@ -183,7 +183,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 <p>${priceFormatted}</p>
                 ${sizesHtml}
                 <div class="card-actions">
-                  <button onclick="event.stopPropagation(); addToCart('${safeNameForJs}', ${product.price}, '${imageUrl}', '${safeCategory}', null, '${product.id}')">Add to Cart</button>
+                  <button onclick="event.stopPropagation(); addToCart({id: '${product.id}', name: '${safeNameForJs}', price: ${product.price}, image: '${imageUrl}', category: '${safeCategory}'})">Add to Cart</button>
                 </div>
             </div>
         `;

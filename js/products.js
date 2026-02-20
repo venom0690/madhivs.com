@@ -44,7 +44,12 @@ const ProductService = {
         try {
             const query = new URLSearchParams(params).toString();
             // Assuming the API is at /api/products based on controller
-            const response = await fetch(`/api/products?${query}`);
+            // FIX: Ensure we get enough products for client-side filtering if no limit specified
+            let url = `/api/products?${query}`;
+            if (!params.limit) {
+                url += (url.includes('?') ? '&' : '?') + 'limit=1000';
+            }
+            const response = await fetch(url);
 
             if (!response.ok) {
                 throw new Error(`API Error: ${response.status}`);

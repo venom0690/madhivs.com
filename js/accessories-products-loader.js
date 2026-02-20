@@ -56,8 +56,9 @@
                 ProductService.getCategories()
             ]);
 
-            // Find accessories category (case-insensitive)
+            // Find accessories category (prioritize type, then name)
             const accessoriesCategory = categories.find(cat =>
+                cat.type === 'Accessories' ||
                 cat.name.toLowerCase().includes('accessories') ||
                 cat.name.toLowerCase().includes('accessory')
             );

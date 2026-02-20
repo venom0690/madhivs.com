@@ -37,11 +37,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         try {
+            // Fetch CSRF token for state-changing request
+            let csrfToken = '';
+            try {
+                const csrfResponse = await fetch('/api/csrf-token');
+                const csrfData = await csrfResponse.json();
+                csrfToken = csrfData.csrfToken || '';
+            } catch (e) { console.warn('CSRF token fetch failed:', e); }
+
             const response = await fetch('/api/settings', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}`,
+                    'X-CSRF-Token': csrfToken
                 },
                 body: JSON.stringify(updates)
             });

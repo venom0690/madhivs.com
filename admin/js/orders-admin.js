@@ -159,7 +159,7 @@
 
             // Apply filter
             if (statusFilter !== 'All') {
-                orders = orders.filter(order => (order.orderStatus || order.status) === statusFilter);
+                orders = orders.filter(order => order.orderStatus === statusFilter);
             }
 
             // Sort by date (newest first)
@@ -255,9 +255,7 @@
         modal.classList.add('show');
 
         try {
-            console.log('Fetching order:', orderId);
             const order = await dataService.getOrderById(orderId);
-            console.log('Order data received:', order);
 
             if (order) {
                 viewOrderDetails(order);

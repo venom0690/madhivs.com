@@ -51,6 +51,12 @@ function buildCategoryDropdown(categories, container) {
         dropdown.appendChild(womenSection);
     }
 
+    const accessoriesCategories = categories.filter(cat => cat.type === 'Accessories');
+    if (accessoriesCategories.length > 0) {
+        const accSection = buildCategorySection('ACCESSORIES', accessoriesCategories, 'Accessories');
+        dropdown.appendChild(accSection);
+    }
+
     if (generalCategories.length > 0) {
         const generalSection = buildCategorySection('OTHERS', generalCategories, 'General');
         dropdown.appendChild(generalSection);
@@ -91,6 +97,7 @@ function buildCategoryItem(category, type, isChild = false) {
     else if (type === 'Women' || category.type === 'Women') baseUrl = 'women.html';
     else if (type === 'Accessories' || category.type === 'Accessories') baseUrl = 'accessories.html';
 
+    // If we have a specific ID, use it
     const href = `${baseUrl}?category=${category.id}`;
 
     if (hasChildren) {

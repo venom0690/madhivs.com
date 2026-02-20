@@ -2,7 +2,7 @@ const db = require('../db');
 const { slugify } = require('../utils/helpers');
 
 // Valid category types (matches ENUM in schema)
-const VALID_TYPES = ['Men', 'Women', 'General'];
+const VALID_TYPES = ['Men', 'Women', 'Accessories', 'General'];
 
 /**
  * Get all categories

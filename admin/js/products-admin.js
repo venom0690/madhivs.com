@@ -102,8 +102,31 @@
     primaryImageFileInput.addEventListener('change', handlePrimaryImageFile);
 
     // Category/SubCategory Handlers
-    productCategoryInput.addEventListener('change', function () {
-        loadSubCategories(this.value);
+    productCategoryInput.addEventListener('change', async function () {
+        const categoryId = this.value;
+        loadSubCategories(categoryId);
+
+        // Auto-set flags based on category type
+        if (categoryId) {
+            try {
+                const category = await dataService.getCategoryById(categoryId);
+                if (category) {
+                    if (category.type === 'Men') {
+                        isMenCollectionInput.checked = true;
+                        isWomenCollectionInput.checked = false;
+                    } else if (category.type === 'Women') {
+                        isWomenCollectionInput.checked = true;
+                        isMenCollectionInput.checked = false;
+                    } else {
+                        // Reset or leave as is? Let's leave as is to not annoy user, 
+                        // or maybe reset if switching from Men to Accessories?
+                        // Safest is to only set TRUE when we are sure.
+                    }
+                }
+            } catch (e) {
+                console.error('Error fetching category details for flags:', e);
+            }
+        }
     });
 
     if (createCategoryLink) {

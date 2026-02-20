@@ -276,14 +276,21 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         // Create product object with dynamic data from URL
         const product = {
-            id: (productData && productData.id) ? productData.id : productName.replace(/\s+/g, '-').toLowerCase(),
+            id: (productData && productData.id) ? productData.id : null, // ID is critical
+            productId: (productData && productData.id) ? productData.id : null, // redundant but safe
             name: productData ? productData.name : productName,
             price: productData ? parseInt(productData.price) : parseInt(productPrice),
             image: productData ? productData.image : productImage,
             size: selectedSize,
             color: selectedColor,
-            quantity: quantity
+            quantity: quantity,
+            category: productData ? productData.category : null
         };
+
+        if (!product.id) {
+            // Fallback for hardcoded/test items without ID
+            product.id = productName.replace(/\s+/g, '-').toLowerCase();
+        }
 
         // Call addToCart from cart.js
         addToCart(product);

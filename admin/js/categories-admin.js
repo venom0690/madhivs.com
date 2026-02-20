@@ -193,7 +193,8 @@
                     <td>
                         <span class="badge ${parent.type === 'Men' ? 'badge-primary' :
                         parent.type === 'Women' ? 'badge-success' :
-                            'badge-warning'}">
+                            parent.type === 'Accessories' ? 'badge-info' :
+                                'badge-warning'}">
                             ${parent.type}
                         </span>
                     </td>
@@ -221,7 +222,8 @@
                         <td>
                             <span class="badge ${sub.type === 'Men' ? 'badge-primary' :
                             sub.type === 'Women' ? 'badge-success' :
-                                'badge-warning'}">
+                                sub.type === 'Accessories' ? 'badge-info' :
+                                    'badge-warning'}">
                                 ${sub.type}
                             </span>
                         </td>

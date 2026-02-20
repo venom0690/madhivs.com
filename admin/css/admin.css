@@ -689,6 +689,11 @@ tr:last-child td {
     color: var(--primary);
 }
 
+.badge-info {
+    background-color: rgba(147, 51, 234, 0.1);
+    color: #9333ea;
+}
+
 /* ==================== UTILITIES ==================== */
 .text-center {
     text-align: center;

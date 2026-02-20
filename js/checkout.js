@@ -1,6 +1,7 @@
 // Checkout Logic extracted from main.js
 
-function loadCheckoutSummary() {
+// Safe load of checkout summary
+async function loadCheckoutSummary() {
     let cart = JSON.parse(localStorage.getItem("cart")) || [];
     let container = document.getElementById("order-items");
 
@@ -11,6 +12,7 @@ function loadCheckoutSummary() {
         return;
     }
 
+    // Render Items first (Immediate UX)
     let total = 0;
     let html = "";
 
@@ -22,49 +24,39 @@ function loadCheckoutSummary() {
         const sizeText = safeSize ? ` (${safeSize})` : '';
 
         html += `
-      <div class="order-item">
-        <span>${safeName}${sizeText} x${item.quantity}</span>
-        <span>₹${itemTotal.toLocaleString()}</span>
-      </div>
-    `;
+            <div class="order-item">
+                <span>${safeName}${sizeText} x${item.quantity}</span>
+                <span>₹${itemTotal.toLocaleString()}</span>
+            </div>
+        `;
     });
 
-    // Fetch dynamic shipping cost
-    fetch('/api/settings')
-        .then(res => res.json())
-        .then(response => {
-            let shipping = 99; // Default fallback
-            if (response.status === 'success' && response.data.shipping_cost) {
-                shipping = parseFloat(response.data.shipping_cost);
-            }
+    container.innerHTML = html; // Initial render without shipping
 
-            const finalTotal = total + shipping;
+    // Fetch Shipping
+    let shipping = 99; // Default
+    try {
+        const response = await fetch('/api/settings');
+        const data = await response.json();
+        if (data.status === 'success' && data.data.shipping_cost) {
+            shipping = parseFloat(data.data.shipping_cost);
+        }
+    } catch (e) {
+        console.error('Failed to load shipping settings, using default:', e);
+    }
 
-            // Append shipping and total
-            html += `
+    const finalTotal = total + shipping;
+
+    // Append Shipping and Update Total
+    const shippingHtml = `
             <div class="order-item">
-            <span>Shipping</span>
-            <span>₹${shipping}</span>
+                <span>Shipping</span>
+                <span>₹${shipping.toLocaleString()}</span>
             </div>
         `;
 
-            container.innerHTML = html;
-            document.getElementById("order-total").textContent = `₹${finalTotal.toLocaleString()}`;
-        })
-        .catch(err => {
-            console.error('Failed to load settings:', err);
-            // Fallback render
-            const shipping = 99;
-            const finalTotal = total + shipping;
-            html += `
-            <div class="order-item">
-            <span>Shipping</span>
-            <span>₹${shipping}</span>
-            </div>
-        `;
-            container.innerHTML = html;
-            document.getElementById("order-total").textContent = `₹${finalTotal.toLocaleString()}`;
-        });
+    container.insertAdjacentHTML('beforeend', shippingHtml);
+    document.getElementById("order-total").textContent = `₹${finalTotal.toLocaleString()}`;
 }
 
 function handleCheckout(event) {
