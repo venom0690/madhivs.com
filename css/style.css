@@ -591,6 +591,34 @@ header.navbar {
     margin: 0 auto;
 }
 
+/* Section CTA - View All Button */
+.section-cta {
+    text-align: center;
+    margin-top: 3rem;
+}
+
+.btn-view-all {
+    display: inline-block;
+    padding: 1rem 2.5rem;
+    background: var(--color-primary);
+    color: var(--color-white);
+    text-decoration: none;
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    border-radius: 2px;
+    transition: var(--transition-smooth);
+    border: 1px solid var(--color-primary);
+}
+
+.btn-view-all:hover {
+    background: var(--color-secondary);
+    border-color: var(--color-secondary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-medium);
+}
+
 .section-header {
     text-align: center;
     margin-bottom: 3rem;

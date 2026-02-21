@@ -29,3 +29,4 @@ build/
 *.md
 *.sh
 *.bat
+*.htaccess

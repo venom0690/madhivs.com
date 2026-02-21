@@ -9,6 +9,8 @@
     document.addEventListener('DOMContentLoaded', async function () {
         const popularContainer = document.getElementById('popularProducts');
         const trendingContainer = document.getElementById('trendingProducts');
+        const mensContainer = document.getElementById('mensProducts');
+        const womensContainer = document.getElementById('womensProducts');
 
         if (!popularContainer || !trendingContainer) return;
 
@@ -129,19 +131,27 @@
             // Show loading state
             popularContainer.innerHTML = '<div class="loading-spinner">Loading...</div>';
             trendingContainer.innerHTML = '<div class="loading-spinner">Loading...</div>';
+            if (mensContainer) mensContainer.innerHTML = '<div class="loading-spinner">Loading...</div>';
+            if (womensContainer) womensContainer.innerHTML = '<div class="loading-spinner">Loading...</div>';
 
-            const [popularProducts, trendingProducts] = await Promise.all([
+            const [popularProducts, trendingProducts, mensProducts, womensProducts] = await Promise.all([
                 ProductService.getPopular(),
-                ProductService.getTrending()
+                ProductService.getTrending(),
+                mensContainer ? ProductService.getMen().then(products => products.slice(0, 8)) : Promise.resolve([]),
+                womensContainer ? ProductService.getWomen().then(products => products.slice(0, 8)) : Promise.resolve([])
             ]);
 
             renderProducts(popularProducts, popularContainer);
             renderProducts(trendingProducts, trendingContainer);
+            if (mensContainer) renderProducts(mensProducts, mensContainer);
+            if (womensContainer) renderProducts(womensProducts, womensContainer);
 
         } catch (error) {
             console.error('Error loading home products:', error);
             popularContainer.innerHTML = '<div class="error-message">Failed to load products.</div>';
             trendingContainer.innerHTML = '<div class="error-message">Failed to load products.</div>';
+            if (mensContainer) mensContainer.innerHTML = '<div class="error-message">Failed to load products.</div>';
+            if (womensContainer) womensContainer.innerHTML = '<div class="error-message">Failed to load products.</div>';
         }
     });
 })();
