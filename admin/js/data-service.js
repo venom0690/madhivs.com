@@ -1,7 +1,7 @@
 /**
  * Data Service - Admin Panel API Layer
  * Handles all API communication for the admin panel
- * Aligned with MySQL backend response shapes
+ * Aligned with PHP backend response shapes (session-based auth)
  */
 
 const dataService = (function () {
@@ -31,7 +31,7 @@ const dataService = (function () {
         // Fetch new token
         tokenFetchPromise = (async () => {
             try {
-                const response = await fetch(`${API_BASE}/csrf-token`);
+                const response = await fetch(`${API_BASE}/csrf-token`, { credentials: 'include' });
                 const data = await response.json();
                 csrfToken = data.csrfToken;
                 tokenFetchPromise = null;
@@ -53,12 +53,7 @@ const dataService = (function () {
      * FIX: Added CSRF token for state-changing requests
      */
     async function _request(endpoint, options = {}) {
-        const token = localStorage.getItem('adminToken');
         const headers = options.headers || {};
-
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
 
         // Add CSRF token for state-changing requests
         if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method)) {
@@ -75,7 +70,8 @@ const dataService = (function () {
 
         const response = await fetch(`${API_BASE}${endpoint}`, {
             ...options,
-            headers
+            headers,
+            credentials: 'include', // Send session cookies
         });
 
         // FIX: Handle 401 Unauthorized - token expired or invalid

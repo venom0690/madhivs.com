@@ -95,6 +95,12 @@
     Deny from all
 </FilesMatch>
 
+# Protect logs directory
+<DirectoryMatch "logs">
+    Order allow,deny
+    Deny from all
+</DirectoryMatch>
+
 # Protect .htaccess itself
 <Files .htaccess>
     Order allow,deny
@@ -218,7 +224,7 @@ ErrorDocument 503 /error.html
 </IfModule>
 
 # ============================================
-# 8. URL REWRITING (SPA Support)
+# 8. URL REWRITING — PHP API ROUTING
 # ============================================
 
 <IfModule mod_rewrite.c>
@@ -239,23 +245,36 @@ ErrorDocument 503 /error.html
     # Protect server directory from direct access
     RewriteRule ^server/ - [F,L]
     
-    # API requests should go to Node.js backend (if using Apache as reverse proxy)
-    # Uncomment if you're using Apache as reverse proxy to Node.js
-    # RewriteCond %{REQUEST_URI} ^/api/
-    # RewriteRule ^(.*)$ http://localhost:5000/$1 [P,L]
+    # ── PHP API ROUTES ──────────────────────────
+    # Route /api/* to corresponding PHP files
+    # These replace the old Node.js/Express routes
+    
+    RewriteRule ^api/admin/(.*)$        api/login.php/$1 [L,QSA]
+    RewriteRule ^api/products/?$        api/products.php [L,QSA]
+    RewriteRule ^api/products/(.+)$     api/products.php/$1 [L,QSA]
+    RewriteRule ^api/categories/?$      api/categories.php [L,QSA]
+    RewriteRule ^api/categories/(.+)$   api/categories.php/$1 [L,QSA]
+    RewriteRule ^api/orders/?$          api/orders.php [L,QSA]
+    RewriteRule ^api/orders/(.+)$       api/orders.php/$1 [L,QSA]
+    RewriteRule ^api/upload/?$          api/upload.php [L,QSA]
+    RewriteRule ^api/upload/(.+)$       api/upload.php/$1 [L,QSA]
+    RewriteRule ^api/content/(.*)$      api/content.php/$1 [L,QSA]
+    RewriteRule ^api/settings/?$        api/settings.php [L,QSA]
+    RewriteRule ^api/csrf-token/?$      api/csrf-token.php [L,QSA]
+    RewriteRule ^api/health/?$          api/health.php [L,QSA]
+    
+    # Serve uploaded files from server/uploads directory
+    RewriteRule ^uploads/(.*)$          server/uploads/$1 [L]
     
     # Don't rewrite files or directories that exist
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     
-    # Don't rewrite API calls
+    # Don't rewrite API calls or uploads
     RewriteCond %{REQUEST_URI} !^/api/
-    
-    # Don't rewrite uploads
     RewriteCond %{REQUEST_URI} !^/uploads/
     
     # Rewrite everything else to index.html (SPA support)
-    # Comment this out if you're NOT using a SPA framework
     # RewriteRule ^(.*)$ /index.html [L]
 </IfModule>
 

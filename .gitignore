@@ -26,3 +26,6 @@ build/
 # Backups
 *.bak
 *.sql.bak
+*.md
+*.sh
+*.bat

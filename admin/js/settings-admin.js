@@ -1,9 +1,8 @@
-// Settings Admin Script
+// Settings Admin Script (PHP session-based auth)
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Check auth
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
+    // Check auth via authService
+    if (typeof authService !== 'undefined' && !authService.isAuthenticated()) {
         window.location.href = 'index.html';
         return;
     }
@@ -14,7 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Load Settings
     try {
-        const response = await fetch('/api/settings');
+        const response = await fetch('/api/settings', { credentials: 'include' });
         const data = await response.json();
 
         if (data.status === 'success') {
@@ -37,10 +36,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         try {
-            // Fetch CSRF token for state-changing request
+            // Fetch CSRF token
             let csrfToken = '';
             try {
-                const csrfResponse = await fetch('/api/csrf-token');
+                const csrfResponse = await fetch('/api/csrf-token', { credentials: 'include' });
                 const csrfData = await csrfResponse.json();
                 csrfToken = csrfData.csrfToken || '';
             } catch (e) { console.warn('CSRF token fetch failed:', e); }
@@ -49,9 +48,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
                     'X-CSRF-Token': csrfToken
                 },
+                credentials: 'include',
                 body: JSON.stringify(updates)
             });
 

@@ -1,287 +1,418 @@
- # Deployment Checklist - Admin Panel Token Fix
+# 🚀 DEPLOYMENT CHECKLIST
+## Maadhivs Boutique - PHP Deployment
 
-## Pre-Deployment Verification
-
-### ✅ Code Changes
-- [x] Updated `admin/js/data-service.js` with 401 interceptor
-- [x] Updated `admin/js/auth.js` with async token verification
-- [x] Updated `admin/js/products-admin.js` with async IIFE
-- [x] Updated `admin/js/dashboard.js` with async IIFE
-- [x] Updated `admin/js/categories-admin.js` with async IIFE
-- [x] Updated `admin/js/orders-admin.js` with async IIFE
-- [x] Updated `admin/js/keywords-admin.js` with async IIFE
-- [x] Updated `admin/js/homepage-admin.js` with async IIFE
-
-### ✅ Testing
-- [ ] Test normal login flow
-- [ ] Test product update functionality
-- [ ] Test token expiration handling
-- [ ] Test invalid token handling
-- [ ] Test all admin pages load correctly
-- [ ] Test 401 error interception
-- [ ] Test automatic redirect to login
-
-### ✅ Documentation
-- [x] Created `ADMIN_PANEL_FIXES.md` - Technical documentation
-- [x] Created `TESTING_GUIDE.md` - Testing procedures
-- [x] Created `FIXES_SUMMARY.md` - Executive summary
-- [x] Created `docs/authentication-flow.md` - Flow diagrams
-- [x] Created `DEPLOYMENT_CHECKLIST.md` - This file
-
-## Environment Setup
-
-### Database Configuration
-- [ ] MySQL server is running
-- [ ] Database `maadhivs_boutique` exists
-- [ ] Tables are created (run `database_setup.sql`)
-- [ ] Admin user is seeded (run `node seeds/seedAdmin.js`)
-
-### Environment Variables (.env)
-- [ ] `NODE_ENV` is set (development/production)
-- [ ] `PORT` is set (default: 5000)
-- [ ] `DB_HOST` is configured
-- [ ] `DB_USER` is configured
-- [ ] `DB_PASSWORD` is configured
-- [ ] `DB_NAME` is configured
-- [ ] `JWT_SECRET` is set (minimum 32 characters, secure random string)
-- [ ] `JWT_EXPIRES_IN` is set (default: 7d)
-- [ ] `ADMIN_EMAIL` is set
-- [ ] `ADMIN_PASSWORD` is set (change from default!)
-- [ ] `FRONTEND_URL` is configured for CORS
-
-### Dependencies
-- [ ] Node.js is installed (v14+ recommended)
-- [ ] npm packages are installed (`npm install` in server folder)
-- [ ] All required npm packages are present
-
-## Security Checklist
-
-### Critical Security Items
-- [ ] JWT_SECRET is changed from default
-- [ ] JWT_SECRET is at least 32 characters
-- [ ] ADMIN_PASSWORD is changed from default
-- [ ] Database password is secure
-- [ ] HTTPS is enabled in production
-- [ ] CORS is properly configured
-- [ ] Rate limiting is enabled
-
-### Recommended Security Items
-- [ ] Consider implementing token refresh mechanism
-- [ ] Consider moving to httpOnly cookies
-- [ ] Consider adding CSRF protection
-- [ ] Consider implementing 2FA
-- [ ] Consider adding audit logging
-
-## Testing Checklist
-
-### Functional Testing
-- [ ] Login with correct credentials works
-- [ ] Login with incorrect credentials fails appropriately
-- [ ] Dashboard loads and displays statistics
-- [ ] Products page loads product list
-- [ ] Can create new product
-- [ ] Can edit existing product ⭐ (Main fix)
-- [ ] Can delete product
-- [ ] Categories page works
-- [ ] Orders page works
-- [ ] Homepage control works
-- [ ] Keywords management works
-
-### Authentication Testing
-- [ ] Token is stored in localStorage after login
-- [ ] Token is sent with API requests
-- [ ] Expired token triggers redirect to login
-- [ ] Invalid token triggers redirect to login
-- [ ] Missing token triggers redirect to login
-- [ ] Logout clears token and redirects
-- [ ] All admin pages verify token on load
-
-### Error Handling Testing
-- [ ] 401 errors trigger automatic redirect
-- [ ] Network errors show appropriate messages
-- [ ] Validation errors are displayed clearly
-- [ ] Server errors are handled gracefully
-
-### Browser Compatibility
-- [ ] Chrome/Edge (latest)
-- [ ] Firefox (latest)
-- [ ] Safari (latest)
-- [ ] Mobile browsers (if applicable)
-
-## Performance Checklist
-
-### Server Performance
-- [ ] Server starts without errors
-- [ ] API responses are fast (<500ms)
-- [ ] Database queries are optimized
-- [ ] No memory leaks detected
-- [ ] Rate limiting is working
-
-### Client Performance
-- [ ] Pages load quickly
-- [ ] No console errors
-- [ ] No console warnings (except expected)
-- [ ] Images load properly
-- [ ] UI is responsive
-
-## Deployment Steps
-
-### 1. Backup Current System
-```bash
-# Backup database
-mysqldump -u root -p maadhivs_boutique > backup_$(date +%Y%m%d).sql
-
-# Backup code (if applicable)
-cp -r /path/to/project /path/to/backup
-```
-
-### 2. Deploy Code Changes
-```bash
-# Pull latest changes
-git pull origin main
-
-# Install dependencies
-cd server
-npm install
-
-# Verify environment variables
-cat .env  # Check all variables are set
-```
-
-### 3. Database Migration (if needed)
-```bash
-# Run any new migrations
-mysql -u root -p maadhivs_boutique < database_setup.sql
-```
-
-### 4. Restart Server
-```bash
-# Stop existing server
-# (Method depends on your setup: pm2, systemd, etc.)
-
-# Start server
-npm start
-
-# Or with pm2:
-pm2 restart maadhivs-boutique
-```
-
-### 5. Verify Deployment
-- [ ] Server is running
-- [ ] Can access admin panel
-- [ ] Can login successfully
-- [ ] Can update products without errors
-- [ ] All features work as expected
-
-## Post-Deployment Verification
-
-### Immediate Checks (First 5 minutes)
-- [ ] Admin panel is accessible
-- [ ] Login works
-- [ ] Product update works
-- [ ] No console errors
-- [ ] No server errors in logs
-
-### Short-term Monitoring (First hour)
-- [ ] Monitor server logs for errors
-- [ ] Check for any 401 errors
-- [ ] Verify all admin functions work
-- [ ] Check database connections
-- [ ] Monitor server resource usage
-
-### Long-term Monitoring (First day)
-- [ ] No authentication issues reported
-- [ ] No token-related errors
-- [ ] Server performance is stable
-- [ ] No unexpected errors in logs
-
-## Rollback Plan
-
-If issues occur after deployment:
-
-### Quick Rollback
-```bash
-# Stop server
-pm2 stop maadhivs-boutique
-
-# Restore backup
-cp -r /path/to/backup/* /path/to/project/
-
-# Restore database
-mysql -u root -p maadhivs_boutique < backup_YYYYMMDD.sql
-
-# Restart server
-pm2 start maadhivs-boutique
-```
-
-### Partial Rollback
-If only specific files need rollback:
-```bash
-# Revert specific files
-git checkout HEAD~1 -- admin/js/data-service.js
-git checkout HEAD~1 -- admin/js/auth.js
-# etc.
-
-# Restart server
-pm2 restart maadhivs-boutique
-```
-
-## Support Contacts
-
-### Technical Issues
-- Check `ADMIN_PANEL_FIXES.md` for technical details
-- Check `TESTING_GUIDE.md` for testing procedures
-- Review server logs: `tail -f /path/to/logs/error.log`
-
-### Common Issues & Solutions
-
-**Issue**: Server won't start
-- Check `.env` file exists and is configured
-- Verify MySQL is running
-- Check port 5000 is not in use
-
-**Issue**: Can't login
-- Verify admin user exists (run seed script)
-- Check JWT_SECRET is set
-- Check database connection
-
-**Issue**: Still getting token errors
-- Clear browser localStorage
-- Verify all files were updated
-- Check server logs for JWT errors
-- Ensure JWT_SECRET hasn't changed
-
-## Success Criteria
-
-Deployment is successful when:
-- ✅ All tests pass
-- ✅ No console errors
-- ✅ No server errors
-- ✅ Product updates work without token errors
-- ✅ Authentication flow works smoothly
-- ✅ All admin features are functional
-- ✅ Performance is acceptable
-- ✅ Security measures are in place
-
-## Sign-off
-
-- [ ] Developer: Code changes verified
-- [ ] Tester: All tests passed
-- [ ] Admin: Credentials updated
-- [ ] DevOps: Server configured
-- [ ] Manager: Deployment approved
+Use this checklist to ensure a smooth deployment to shared hosting.
 
 ---
 
-**Deployment Date**: _______________
-**Deployed By**: _______________
-**Verified By**: _______________
-**Status**: ⬜ Pending | ⬜ In Progress | ⬜ Complete | ⬜ Rolled Back
+## 📋 PRE-DEPLOYMENT
 
-## Notes
+### ✅ Local Testing
 
-_Add any deployment-specific notes here:_
+- [ ] All API endpoints working locally
+- [ ] Admin panel login successful
+- [ ] Products CRUD operations working
+- [ ] Categories CRUD operations working
+- [ ] Order creation working
+- [ ] Image uploads working
+- [ ] Frontend pages loading correctly
+
+### ✅ Files Preparation
+
+- [ ] Database credentials updated in `api/db.php`
+- [ ] CORS origins updated in `api/helpers.php`
+- [ ] Domain name updated in `.htaccess` (line ~300)
+- [ ] All sensitive files excluded from upload (.env, .git)
 
 ---
 
-**Remember**: Always test in a staging environment before deploying to production!
+## 🗄️ DATABASE SETUP
+
+### Step 1: Create Database
+
+**Via cPanel:**
+- [ ] Login to cPanel
+- [ ] Navigate to MySQL Databases
+- [ ] Create database: `username_boutique` (or similar)
+- [ ] Create database user
+- [ ] Grant ALL PRIVILEGES to user
+- [ ] Note down: DB_HOST, DB_NAME, DB_USER, DB_PASS
+
+**Via Command Line:**
+```bash
+mysql -u root -p -e "CREATE DATABASE maadhivs_boutique CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql -u root -p -e "CREATE USER 'boutique_user'@'localhost' IDENTIFIED BY 'strong_password';"
+mysql -u root -p -e "GRANT ALL PRIVILEGES ON maadhivs_boutique.* TO 'boutique_user'@'localhost';"
+mysql -u root -p -e "FLUSH PRIVILEGES;"
+```
+
+### Step 2: Import Schema
+
+**Via phpMyAdmin:**
+- [ ] Select your database
+- [ ] Click "Import" tab
+- [ ] Upload `server/database_setup.sql`
+- [ ] Click "Go"
+- [ ] Upload `api/migrate.sql`
+- [ ] Click "Go"
+
+**Via Command Line:**
+```bash
+mysql -u boutique_user -p maadhivs_boutique < server/database_setup.sql
+mysql -u boutique_user -p maadhivs_boutique < api/migrate.sql
+```
+
+### Step 3: Verify Tables
+
+```sql
+SHOW TABLES;
+-- Should show: admins, categories, products, orders, order_items, 
+--              shipping_addresses, settings, search_keywords
+```
+
+---
+
+## 📤 FILE UPLOAD
+
+### Files to Upload
+
+```
+✅ Upload these directories/files:
+├── api/                    (all PHP files)
+├── admin/                  (admin panel)
+├── css/                    (styles)
+├── js/                     (if exists)
+├── server/uploads/         (existing images)
+├── .htaccess               (Apache config)
+├── index.html
+├── about.html
+├── accessories.html
+├── cart.html
+├── checkout.html
+├── contact.html
+└── favicon.ico             (if exists)
+
+❌ DO NOT upload:
+├── server/node_modules/
+├── server/controllers/
+├── server/middleware/
+├── server/routes/
+├── server/package.json
+├── .git/
+├── .env
+└── *.md files (optional)
+```
+
+### Upload Methods
+
+**Via cPanel File Manager:**
+- [ ] Login to cPanel
+- [ ] Open File Manager
+- [ ] Navigate to `public_html/` (or your domain folder)
+- [ ] Upload files (use ZIP for faster upload)
+- [ ] Extract if uploaded as ZIP
+
+**Via FTP:**
+```bash
+# Using FileZilla or similar FTP client
+Host: ftp.yourdomain.com
+Username: your_cpanel_username
+Password: your_cpanel_password
+Port: 21
+```
+
+**Via SSH/SCP:**
+```bash
+scp -r api/ user@yourdomain.com:/home/user/public_html/
+scp -r admin/ user@yourdomain.com:/home/user/public_html/
+scp .htaccess user@yourdomain.com:/home/user/public_html/
+```
+
+---
+
+## ⚙️ CONFIGURATION
+
+### Step 1: Update Database Connection
+
+Edit `api/db.php` on server:
+
+```php
+$DB_HOST = 'localhost';              // Usually 'localhost'
+$DB_NAME = 'username_boutique';      // Your actual DB name
+$DB_USER = 'username_dbuser';        // Your actual DB user
+$DB_PASS = 'your_secure_password';   // Your actual DB password
+```
+
+### Step 2: Set File Permissions
+
+**Via cPanel File Manager:**
+- [ ] Right-click `server/uploads/` → Change Permissions → 755
+- [ ] Right-click `api/` → Change Permissions → 755
+- [ ] Right-click `.htaccess` → Change Permissions → 644
+
+**Via SSH:**
+```bash
+chmod 755 server/uploads/
+chmod 755 api/
+chmod 644 .htaccess
+chmod 644 api/*.php
+```
+
+### Step 3: Create Admin User
+
+**Via Browser:**
+```
+https://yourdomain.com/api/seed-admin.php
+```
+
+**Via SSH:**
+```bash
+cd /home/user/public_html
+php api/seed-admin.php
+```
+
+**Default Credentials:**
+- Email: `admin@maadhivs.com`
+- Password: `Admin@123`
+
+⚠️ **IMPORTANT:** Change password immediately after first login!
+
+---
+
+## 🧪 TESTING
+
+### API Endpoints
+
+Test each endpoint:
+
+```bash
+# Health check
+curl https://yourdomain.com/api/health
+# Expected: {"status":"success","message":"API is running"}
+
+# Get products
+curl https://yourdomain.com/api/products
+# Expected: {"status":"success","results":0,"products":[]}
+
+# Get categories
+curl https://yourdomain.com/api/categories
+# Expected: {"status":"success","results":0,"categories":[]}
+
+# Admin login
+curl -X POST https://yourdomain.com/api/admin/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@maadhivs.com","password":"Admin@123"}'
+# Expected: {"status":"success","token":"...","admin":{...}}
+```
+
+### Admin Panel
+
+- [ ] Navigate to `https://yourdomain.com/admin/`
+- [ ] Login with admin credentials
+- [ ] Dashboard loads correctly
+- [ ] Navigate to Categories page
+- [ ] Create a test category
+- [ ] Navigate to Products page
+- [ ] Upload a test image
+- [ ] Create a test product
+- [ ] Edit the product
+- [ ] Delete the product
+- [ ] Navigate to Orders page (should be empty)
+- [ ] Navigate to Settings page
+- [ ] Update shipping cost
+- [ ] Logout
+
+### Frontend
+
+- [ ] Homepage loads: `https://yourdomain.com/`
+- [ ] About page loads: `https://yourdomain.com/about.html`
+- [ ] Accessories page loads: `https://yourdomain.com/accessories.html`
+- [ ] Cart page loads: `https://yourdomain.com/cart.html`
+- [ ] Checkout page loads: `https://yourdomain.com/checkout.html`
+- [ ] Contact page loads: `https://yourdomain.com/contact.html`
+- [ ] Images load correctly
+- [ ] CSS styles applied
+- [ ] JavaScript working
+
+### Browser Console
+
+- [ ] No JavaScript errors
+- [ ] No 404 errors
+- [ ] No CORS errors
+- [ ] API calls successful
+
+---
+
+## 🔒 SECURITY
+
+### Immediate Actions
+
+- [ ] Change default admin password
+- [ ] Verify `.htaccess` is working (try accessing `api/db.php` directly - should be blocked)
+- [ ] Test file upload restrictions (try uploading .php file - should fail)
+- [ ] Verify directory listing is disabled (visit `/uploads/` - should show 403)
+- [ ] Check sensitive files are protected:
+  - [ ] `/.env` → 403 Forbidden
+  - [ ] `/api/db.php` → Should not display source code
+  - [ ] `/.git/` → 403 Forbidden
+
+### SSL Certificate
+
+**Via cPanel:**
+- [ ] Navigate to SSL/TLS
+- [ ] Install Let's Encrypt certificate (usually free)
+- [ ] Force HTTPS redirect
+
+**Via Certbot (SSH):**
+```bash
+sudo certbot --apache -d yourdomain.com -d www.yourdomain.com
+```
+
+**After SSL is installed:**
+- [ ] Uncomment HTTPS redirect in `.htaccess` (line ~50)
+- [ ] Uncomment HSTS header in `.htaccess` (line ~30)
+- [ ] Update CORS origins to use `https://`
+
+---
+
+## 🎨 CUSTOMIZATION
+
+### Branding
+
+- [ ] Update site title in HTML files
+- [ ] Replace logo/favicon
+- [ ] Update contact information
+- [ ] Update social media links
+- [ ] Customize color scheme in CSS
+
+### Settings
+
+- [ ] Set shipping cost in admin panel
+- [ ] Configure homepage slider images
+- [ ] Set up payment methods
+- [ ] Configure email notifications (if implemented)
+
+---
+
+## 📊 MONITORING
+
+### Setup Monitoring
+
+- [ ] Enable error logging in PHP
+- [ ] Set up Google Analytics (optional)
+- [ ] Configure uptime monitoring (e.g., UptimeRobot)
+- [ ] Set up backup schedule
+
+### Error Logs
+
+**Via cPanel:**
+- [ ] Navigate to Errors
+- [ ] Check error logs regularly
+
+**Via SSH:**
+```bash
+tail -f /var/log/apache2/error.log
+tail -f /var/log/php/error.log
+```
+
+---
+
+## 🔄 POST-DEPLOYMENT
+
+### Immediate Tasks
+
+- [ ] Test complete checkout flow
+- [ ] Create sample products
+- [ ] Test order management
+- [ ] Verify email notifications (if configured)
+- [ ] Test on mobile devices
+- [ ] Test on different browsers
+
+### Within 24 Hours
+
+- [ ] Monitor error logs
+- [ ] Check server resource usage
+- [ ] Verify backup is working
+- [ ] Test all forms
+- [ ] Check SEO meta tags
+
+### Within 1 Week
+
+- [ ] Performance optimization
+- [ ] SEO audit
+- [ ] Security audit
+- [ ] User feedback collection
+- [ ] Analytics review
+
+---
+
+## 🆘 TROUBLESHOOTING
+
+### Common Issues
+
+**"Database connection failed"**
+```bash
+# Check credentials in api/db.php
+# Test connection:
+mysql -u your_user -p -h localhost your_database
+```
+
+**"404 Not Found" on API calls**
+```bash
+# Verify .htaccess is uploaded
+# Check mod_rewrite is enabled
+# Check Apache allows .htaccess overrides
+```
+
+**"Session not working"**
+```bash
+# Check session directory permissions
+# Verify cookies are enabled in browser
+# Check CORS headers allow credentials
+```
+
+**"Image upload fails"**
+```bash
+# Check directory permissions: chmod 755 server/uploads/
+# Verify PHP upload limits in .htaccess
+# Check disk space: df -h
+```
+
+---
+
+## ✅ DEPLOYMENT COMPLETE
+
+Once all items are checked:
+
+- [ ] All tests passing
+- [ ] Security measures in place
+- [ ] SSL certificate installed
+- [ ] Monitoring configured
+- [ ] Backups scheduled
+- [ ] Documentation updated
+
+**🎉 Your eCommerce site is now live!**
+
+---
+
+## 📞 SUPPORT
+
+If you encounter issues:
+
+1. Check error logs first
+2. Review troubleshooting section
+3. Verify all checklist items
+4. Test in incognito/private mode
+5. Clear browser cache
+
+---
+
+**Deployment Date:** _________________  
+**Deployed By:** _________________  
+**Domain:** _________________  
+**Hosting Provider:** _________________  
+
+---
+
+**Last Updated:** February 21, 2026  
+**Version:** 1.0.0
